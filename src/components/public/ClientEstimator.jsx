@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Send, CheckCircle2, Clock, ShieldCheck, Palette, Film, Code2, Download, Copy, Check, MessageSquare, ExternalLink, Sparkles, FileText, Link as LinkIcon
+  X, Send, CheckCircle2, Clock, ShieldCheck, Palette, Film, Code2, Download, Copy, Check, MessageSquare, ExternalLink, Sparkles, FileText, Link as LinkIcon, Phone, Mail, Globe
 } from 'lucide-react';
 import { AGENCY_INFO } from '../../data/creativeData';
 
@@ -36,6 +36,7 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
   const [copiedInvoice, setCopiedInvoice] = useState(false);
   const [invoiceId, setInvoiceId] = useState('');
   const [issueDate, setIssueDate] = useState('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (initialService) {
@@ -74,80 +75,81 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
     setInvoiceId(generatedId);
     setIssueDate(today);
 
-    // 1. Render visual order invoice container in offscreen DOM for html2pdf Blob capture
+    // 1. Generate Base64 PDF string for Google Drive upload
     let base64String = '';
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'fixed';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '0px';
-    tempDiv.style.width = '800px';
-    tempDiv.style.background = '#ffffff';
-    tempDiv.style.color = '#0f172a';
-    tempDiv.innerHTML = `
-      <div id="invoice-preview" class="invoice-container" style="font-family: Arial, sans-serif; padding: 30px; background: #ffffff; color: #0f172a;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00f3ff; padding-bottom: 15px; margin-bottom: 20px;">
-          <div>
-            <h1 style="margin: 0; font-size: 22px; color: #0f172a; font-weight: 900; letter-spacing: 1px;">FRAMEMPIRE STUDIO</h1>
-            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">A Revolution of Digital Engineering</p>
-            <p style="margin: 8px 0 0 0; font-size: 12px; color: #475569;"><b>Order Brief ID:</b> ${generatedId}</p>
-            <p style="margin: 2px 0 0 0; font-size: 12px; color: #475569;"><b>Date:</b> ${today}</p>
-          </div>
-          <div style="background: #2A2B30; color: #ffffff; padding: 15px 25px; font-weight: 900; font-size: 16px; letter-spacing: 2px; border-radius: 6px;">
-            PROJECT BRIEF
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
-          <div style="flex: 1;">
-            <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">CLIENT CONTACT:</h4>
-            <p style="margin: 0; font-size: 13px; font-weight: bold; color: #0f172a;">${contactInfo}</p>
-            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Requested Service: ${displayServiceName}</p>
-          </div>
-          <div style="flex: 1;">
-            <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">STUDIO DIRECT CONTACT:</h4>
-            <p style="margin: 0; font-size: 11px; color: #334155;"><b>Direct Phone :</b> +880 1615-288259</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Official Email :</b> team.framempire@gmail.com</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Website :</b> www.framempire.com</p>
-          </div>
-        </div>
-
-        <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; border-radius: 6px; margin-bottom: 20px;">
-          <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #0f172a;">CLIENT CUSTOM PROJECT REQUIREMENTS & VISION:</h4>
-          <p style="margin: 0; font-size: 12px; color: #334155; line-height: 1.6; whitespace: pre-wrap;">${projectDetails.replace(/\n/g, '<br/>')}</p>
-        </div>
-
-        ${referenceLinks.trim() ? `
-        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 11px; color: #334155;">
-          <b>Reference / Drive Links:</b> ${referenceLinks}
-        </div>
-        ` : ''}
-
-        <div style="background: #2A2B30; color: #ffffff; padding: 15px; font-size: 11px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <p style="margin: 0;"><b>FramEmpire Studio</b> • Dhaka, Bangladesh</p>
-            <p style="margin: 3px 0 0 0; color: #cbd5e1;">Our team will review your brief and contact you within 2-4 hours with a custom quote.</p>
-          </div>
-          <div style="font-weight: bold; font-size: 13px; color: #4ade80;">
-            STATUS: BRIEF SUBMITTED
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(tempDiv);
-
     try {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+      
+      // Temporary offscreen element for Google Drive background upload payload
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '0px';
+      tempDiv.style.top = '0px';
+      tempDiv.style.width = '794px';
+      tempDiv.style.zIndex = '-9999';
+      tempDiv.style.opacity = '0.01';
+      tempDiv.style.pointerEvents = 'none';
+      tempDiv.innerHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 35px; background: #070913; color: #f8fafc; border: 3px solid #00f3ff; border-radius: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00f3ff; padding-bottom: 15px; margin-bottom: 20px;">
+            <div>
+              <h1 style="margin: 0; font-size: 24px; color: #ffffff; font-weight: 900; letter-spacing: 1px;">FRAMEMPIRE STUDIO</h1>
+              <p style="margin: 4px 0 0 0; font-size: 11px; color: #00f3ff; font-weight: bold;">A Revolution of Digital Engineering</p>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #cbd5e1;"><b>Order Brief ID:</b> ${generatedId}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #cbd5e1;"><b>Date:</b> ${today}</p>
+            </div>
+            <div style="background: #0f172a; color: #00f3ff; border: 1px solid #00f3ff; padding: 12px 20px; font-weight: 900; font-size: 14px; letter-spacing: 2px; border-radius: 8px; text-align: center;">
+              OFFICIAL PROJECT BRIEF
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
+            <div style="flex: 1; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+              <h4 style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold; color: #00f3ff; text-transform: uppercase;">CLIENT CONTACT DETAILS:</h4>
+              <p style="margin: 0; font-size: 13px; font-weight: bold; color: #ffffff;">${contactInfo}</p>
+              <p style="margin: 4px 0 0 0; font-size: 11px; color: #cbd5e1;">Requested Service: <b>${displayServiceName}</b></p>
+            </div>
+            <div style="flex: 1; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+              <h4 style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold; color: #00f3ff; text-transform: uppercase;">STUDIO DIRECT CONTACT:</h4>
+              <p style="margin: 0; font-size: 11px; color: #cbd5e1;"><b>Direct Phone :</b> +880 1615-288259</p>
+              <p style="margin: 2px 0 0 0; font-size: 11px; color: #cbd5e1;"><b>Official Email :</b> team.framempire@gmail.com</p>
+              <p style="margin: 2px 0 0 0; font-size: 11px; color: #cbd5e1;"><b>Website :</b> www.framempire.com</p>
+            </div>
+          </div>
+
+          <div style="background: #0f172a; border: 1px solid #334155; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 12px; font-weight: bold; color: #00f3ff; text-transform: uppercase;">CLIENT CUSTOM PROJECT REQUIREMENTS & VISION:</h4>
+            <p style="margin: 0; font-size: 12px; color: #e2e8f0; line-height: 1.6; white-space: pre-wrap;">${projectDetails}</p>
+          </div>
+
+          ${referenceLinks.trim() ? `
+          <div style="background: #0f172a; border: 1px solid #334155; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 11px; color: #cbd5e1;">
+            <b style="color: #00f3ff;">Reference / Moodboard Link:</b> ${referenceLinks}
+          </div>
+          ` : ''}
+
+          <div style="background: #0f172a; border: 1px solid #00f3ff; color: #ffffff; padding: 15px; font-size: 11px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="margin: 0; font-weight: bold; color: #ffffff;">FramEmpire Studio • Dhaka, Bangladesh</p>
+              <p style="margin: 3px 0 0 0; color: #94a3b8;">Our creative director will review your brief and contact you within 2-4 hours.</p>
+            </div>
+            <div style="font-weight: bold; font-size: 12px; color: #4ade80; border: 1px solid #4ade80; padding: 4px 10px; border-radius: 4px;">
+              STATUS: SUBMITTED
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(tempDiv);
 
       const opt = {
         margin: 0.15,
-        filename: `Project_Brief_${generatedId}.pdf`,
+        filename: `FramEmpire_Project_Brief_${generatedId}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
 
-      const invoiceNode = tempDiv.querySelector('.invoice-container');
-      const pdfBlob = await window.html2pdf().set(opt).from(invoiceNode).output('blob');
+      const pdfBlob = await window.html2pdf().set(opt).from(tempDiv.children[0]).output('blob');
 
       base64String = await new Promise((resolve) => {
         const reader = new FileReader();
@@ -157,12 +159,10 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
           resolve(res);
         };
       });
+
+      document.body.removeChild(tempDiv);
     } catch (err) {
-      console.log('html2pdf capture error:', err);
-    } finally {
-      if (document.body.contains(tempDiv)) {
-        document.body.removeChild(tempDiv);
-      }
+      console.log('PDF Base64 generation error:', err);
     }
 
     // 2. Dispatch POST payload to Google Apps Script Endpoint
@@ -196,88 +196,33 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
   };
 
   const handleDownloadInvoicePdf = async () => {
+    setIsDownloadingPdf(true);
     try {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
-      
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '0px';
-      tempDiv.style.width = '800px';
-      tempDiv.style.background = '#ffffff';
-      tempDiv.style.color = '#0f172a';
-      tempDiv.innerHTML = `
-        <div class="invoice-container" style="font-family: Arial, sans-serif; padding: 30px; background: #ffffff; color: #0f172a;">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00f3ff; padding-bottom: 15px; margin-bottom: 20px;">
-            <div>
-              <h1 style="margin: 0; font-size: 22px; color: #0f172a; font-weight: 900; letter-spacing: 1px;">FRAMEMPIRE STUDIO</h1>
-              <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">A Revolution of Digital Engineering</p>
-              <p style="margin: 8px 0 0 0; font-size: 12px; color: #475569;"><b>Order Brief ID:</b> ${invoiceId}</p>
-              <p style="margin: 2px 0 0 0; font-size: 12px; color: #475569;"><b>Date:</b> ${issueDate}</p>
-            </div>
-            <div style="background: #2A2B30; color: #ffffff; padding: 15px 25px; font-weight: 900; font-size: 16px; letter-spacing: 2px; border-radius: 6px;">
-              PROJECT BRIEF
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
-            <div style="flex: 1;">
-              <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">CLIENT CONTACT:</h4>
-              <p style="margin: 0; font-size: 13px; font-weight: bold; color: #0f172a;">${contactInfo}</p>
-              <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Requested Service: ${displayServiceName}</p>
-            </div>
-            <div style="flex: 1;">
-              <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">STUDIO DIRECT CONTACT:</h4>
-              <p style="margin: 0; font-size: 11px; color: #334155;"><b>Direct Phone :</b> +880 1615-288259</p>
-              <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Official Email :</b> team.framempire@gmail.com</p>
-              <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Website :</b> www.framempire.com</p>
-            </div>
-          </div>
-
-          <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; border-radius: 6px; margin-bottom: 20px;">
-            <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #0f172a;">CLIENT CUSTOM PROJECT REQUIREMENTS & VISION:</h4>
-            <p style="margin: 0; font-size: 12px; color: #334155; line-height: 1.6; whitespace: pre-wrap;">${projectDetails.replace(/\n/g, '<br/>')}</p>
-          </div>
-
-          ${referenceLinks.trim() ? `
-          <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 11px; color: #334155;">
-            <b>Reference / Drive Links:</b> ${referenceLinks}
-          </div>
-          ` : ''}
-
-          <div style="background: #2A2B30; color: #ffffff; padding: 15px; font-size: 11px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <p style="margin: 0;"><b>FramEmpire Studio</b> • Dhaka, Bangladesh</p>
-              <p style="margin: 3px 0 0 0; color: #cbd5e1;">Our team will review your brief and contact you within 2-4 hours with a custom quote.</p>
-            </div>
-            <div style="font-weight: bold; font-size: 13px; color: #4ade80;">
-              STATUS: BRIEF SUBMITTED
-            </div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(tempDiv);
-
-      const opt = {
-        margin: 0.15,
-        filename: `FramEmpire_Project_Brief_${invoiceId}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-      };
-
-      const pdfBlob = await window.html2pdf().set(opt).from(tempDiv.querySelector('.invoice-container')).output('blob');
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `FramEmpire_Project_Brief_${invoiceId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-      document.body.removeChild(tempDiv);
+      const element = document.getElementById('framempire-official-invoice-node');
+      if (element && window.html2pdf) {
+        const opt = {
+          margin: 0.15,
+          filename: `FramEmpire_Project_Brief_${invoiceId}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        
+        const pdfBlob = await window.html2pdf().set(opt).from(element).output('blob');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `FramEmpire_Project_Brief_${invoiceId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      }
     } catch (err) {
       console.error('Download PDF error:', err);
+    } finally {
+      setIsDownloadingPdf(false);
     }
   };
 
@@ -432,52 +377,117 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
 
           </form>
         ) : (
-          /* SUBMITTED SUCCESS & INVOICE SCREEN */
-          <div className="space-y-6 relative z-10 animate-fade-in text-center">
+          /* SUBMITTED SUCCESS & OFFICIAL GORGEOUS 1-PAGE INVOICE CARD SCREEN */
+          <div className="space-y-6 relative z-10 animate-fade-in text-left">
             
-            <div className="w-16 h-16 rounded-full bg-cyan-950 border-2 border-cyan-400 text-cyan-400 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(0,243,255,0.4)]">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-
-            <div className="space-y-1.5">
-              <h3 className="font-['Creato_Display'] text-2xl font-extrabold text-white">
-                PROJECT BRIEF SUBMITTED SUCCESSFULLY! 🎉
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
-                Thank you! We have received your project details. Our creative team will review your brief and contact you within <strong className="text-cyan-300">2-4 hours</strong> with a custom quote.
-              </p>
-            </div>
-
-            {/* Generated Order Brief Details Card */}
-            <div className="bg-slate-950 p-5 rounded-2xl border border-cyan-500/40 text-left space-y-3 shadow-xl">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-mono block uppercase">Order Brief ID</span>
-                  <span className="text-sm font-extrabold text-cyan-300 font-mono">{invoiceId}</span>
-                </div>
-                <button
-                  onClick={handleCopyInvoiceNumber}
-                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  {copiedInvoice ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedInvoice ? 'Copied ID' : 'Copy ID'}</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-mono block uppercase">Contact Info</span>
-                  <span className="font-semibold text-white truncate block">{contactInfo}</span>
+            <div className="flex items-center justify-between bg-cyan-950/80 border border-cyan-500/40 p-4 rounded-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400 text-cyan-300 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-mono block uppercase">Requested Service</span>
-                  <span className="font-semibold text-cyan-400 block">{displayServiceName}</span>
+                  <h4 className="font-['Creato_Display'] text-base font-extrabold text-white">
+                    PROJECT BRIEF SUBMITTED SUCCESSFULLY! 🎉
+                  </h4>
+                  <p className="text-xs text-slate-300">
+                    Our creative team will review your brief and contact you within <strong className="text-cyan-300">2-4 hours</strong> with a custom quote.
+                  </p>
                 </div>
               </div>
+
+              <button
+                onClick={handleCopyInvoiceNumber}
+                className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+              >
+                {copiedInvoice ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedInvoice ? 'Copied' : 'Copy ID'}</span>
+              </button>
             </div>
 
-            {/* Action Buttons: WhatsApp & Download PDF */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            {/* TARGET NODE FOR HTML2PDF CAPTURE: GORGEOUS OFFICIAL FRAMEMPIRE 1-PAGE INVOICE CARD */}
+            <div id="framempire-official-invoice-node" className="bg-[#070913] p-6 sm:p-7 rounded-2xl border-2 border-cyan-500/50 shadow-2xl relative overflow-hidden text-slate-100 font-sans space-y-5">
+              
+              {/* Card Ambient Neon Backdrop */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Brand Logo & Invoice Document Header */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src="/framempire_logo_white.png" 
+                    alt="FramEmpire Studio" 
+                    className="h-10 sm:h-12 object-contain drop-shadow-[0_0_15px_rgba(0,243,255,0.6)]" 
+                  />
+                  <div>
+                    <h2 className="font-['Creato_Display'] text-lg font-black text-white tracking-wider">FRAMEMPIRE STUDIO</h2>
+                    <span className="text-[10px] text-cyan-400 font-mono block">A REVOLUTION OF DIGITAL ENGINEERING</span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="bg-cyan-950 border border-cyan-500/50 text-cyan-300 text-[10px] font-mono font-extrabold px-3 py-1 rounded-full uppercase tracking-wider block mb-1">
+                    OFFICIAL PROJECT BRIEF
+                  </span>
+                  <span className="text-xs font-mono font-bold text-white block">ID: {invoiceId}</span>
+                  <span className="text-[10px] text-slate-400 font-mono block">Date: {issueDate}</span>
+                </div>
+              </div>
+
+              {/* Grid: Client Contact + Studio Direct Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* Client Detail Item */}
+                <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-cyan-400 font-mono font-bold uppercase tracking-widest block">CLIENT DETAILS</span>
+                  <p className="text-xs font-bold text-white truncate">{contactInfo}</p>
+                  <p className="text-[11px] text-slate-300">Requested Service: <strong className="text-cyan-300">{displayServiceName}</strong></p>
+                </div>
+
+                {/* Studio Detail Item */}
+                <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-1 text-xs">
+                  <span className="text-[10px] text-cyan-400 font-mono font-bold uppercase tracking-widest block">STUDIO DIRECT CONTACT</span>
+                  <div className="space-y-0.5 text-slate-300 text-[11px]">
+                    <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-cyan-400" /> <span>+880 1615-288259</span></p>
+                    <p className="flex items-center gap-1.5"><Mail className="w-3 h-3 text-cyan-400" /> <span>team.framempire@gmail.com</span></p>
+                    <p className="flex items-center gap-1.5"><Globe className="w-3 h-3 text-cyan-400" /> <span>www.framempire.com</span></p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Client Custom Requirements Textbox */}
+              <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2">
+                <span className="text-[10px] text-cyan-400 font-mono font-bold uppercase tracking-widest block">
+                  CLIENT CUSTOM PROJECT REQUIREMENTS & VISION
+                </span>
+                <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
+                  {projectDetails}
+                </p>
+              </div>
+
+              {/* Reference / Moodboard Link Box if provided */}
+              {referenceLinks.trim() && (
+                <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                  <span className="text-[10px] text-slate-400 font-mono uppercase font-bold">Reference / Moodboard Link</span>
+                  <a href={referenceLinks} target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:underline font-semibold text-xs flex items-center gap-1">
+                    <span>{referenceLinks}</span>
+                    <ExternalLink className="w-3 h-3 text-cyan-400" />
+                  </a>
+                </div>
+              )}
+
+              {/* Invoice Footer Bar */}
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+                <span>FramEmpire Studio • Dhaka, Bangladesh</span>
+                <span className="text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded border border-emerald-500/40">
+                  STATUS: BRIEF SUBMITTED
+                </span>
+              </div>
+
+            </div>
+
+            {/* Modal Action Buttons: WhatsApp Chat & Download PDF */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
               <a
                 href={`https://wa.me/8801615288259?text=Hi%20FramEmpire%20Studio!%20I%20just%20submitted%20a%20project%20brief%20(${invoiceId})%20for%20${encodeURIComponent(displayServiceName)}.`}
                 target="_blank"
@@ -490,10 +500,11 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
 
               <button
                 onClick={handleDownloadInvoicePdf}
-                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                disabled={isDownloadingPdf}
+                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
               >
-                <Download className="w-4 h-4 text-cyan-400" />
-                <span>Download Brief PDF</span>
+                <Download className={`w-4 h-4 text-cyan-400 ${isDownloadingPdf ? 'animate-bounce' : ''}`} />
+                <span>{isDownloadingPdf ? 'Downloading PDF...' : 'Download Brief PDF'}</span>
               </button>
             </div>
 
