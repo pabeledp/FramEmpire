@@ -76,10 +76,11 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
 
     // 1. Generate Base64 PDF string for Google Drive upload
     let base64String = '';
+    let tempDiv = null;
     try {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
       
-      const tempDiv = document.createElement('div');
+      tempDiv = document.createElement('div');
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '0px';
       tempDiv.style.top = '0px';
@@ -98,7 +99,7 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
               </div>
             </div>
 
-            <div style="writing-mode: vertical-rl; font-size: 42px; font-weight: 900; color: #cbd5e1; letter-spacing: 6px; text-transform: uppercase; line-height: 1;">
+            <div style="font-size: 40px; font-weight: 900; color: #cbd5e1; letter-spacing: 6px; text-transform: uppercase;">
               INVOICE
             </div>
           </div>
@@ -219,10 +220,12 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
           resolve(res);
         };
       });
-
-      document.body.removeChild(tempDiv);
     } catch (err) {
       console.log('PDF Base64 generation error:', err);
+    } finally {
+      if (tempDiv && document.body.contains(tempDiv)) {
+        document.body.removeChild(tempDiv);
+      }
     }
 
     // 2. Dispatch POST payload to Google Apps Script Endpoint
@@ -257,31 +260,155 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
 
   const handleDownloadInvoicePdf = async () => {
     setIsDownloadingPdf(true);
+    let tempDiv = null;
     try {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
-      const element = document.getElementById('framempire-official-invoice-node');
-      if (element && window.html2pdf) {
-        const opt = {
-          margin: 0.15,
-          filename: `Invoice_${invoiceId}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        
-        const pdfBlob = await window.html2pdf().set(opt).from(element).output('blob');
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `Invoice_${invoiceId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-      }
+      
+      tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '0px';
+      tempDiv.style.top = '0px';
+      tempDiv.style.width = '794px';
+      tempDiv.style.zIndex = '-9999';
+      tempDiv.style.opacity = '0.01';
+      tempDiv.style.pointerEvents = 'none';
+      tempDiv.innerHTML = `
+        <div style="width: 794px; background: #ffffff; color: #1e293b; padding: 45px 50px; font-family: Arial, sans-serif; box-sizing: border-box; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <img src="/framempire_logo_white.png" style="height: 38px; filter: invert(1); display: block;" alt="FramEmpire Logo" />
+              <div style="margin-top: 25px;">
+                <p style="margin: 0; font-weight: bold; font-size: 15px; color: #1e293b;">Invoice : <span style="color: #64748b; font-weight: normal;">${invoiceId}</span></p>
+                <p style="margin: 4px 0 0 0; font-weight: bold; font-size: 15px; color: #1e293b;">Date : <span style="color: #64748b; font-weight: normal;">${issueDate}</span></p>
+              </div>
+            </div>
+
+            <div style="font-size: 40px; font-weight: 900; color: #cbd5e1; letter-spacing: 6px; text-transform: uppercase;">
+              INVOICE
+            </div>
+          </div>
+
+          <div style="border-bottom: 1px solid #e2e8f0; margin: 25px 0;"></div>
+
+          <div style="display: flex; justify-content: space-between; gap: 40px; margin-bottom: 35px;">
+            <div style="flex: 1.2;">
+              <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #0f172a;">Invoice To:</h3>
+              <p style="margin: 0; font-size: 14px; font-weight: bold; color: #0f172a;">${contactInfo}</p>
+              <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748b; line-height: 1.6; white-space: pre-wrap;">
+                <strong style="color: #334155;">Service:</strong> ${projectDetails}
+              </p>
+              ${referenceLinks ? `<p style="margin: 6px 0 0 0; font-size: 11px; color: #0284c7;"><strong>Reference:</strong> ${referenceLinks}</p>` : ''}
+            </div>
+
+            <div style="flex: 0.8;">
+              <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #0f172a;">Payment Info:</h3>
+              <table style="font-size: 12px; color: #475569; border-collapse: collapse;">
+                <tr><td style="padding: 2px 10px 2px 0; font-weight: 600;">Account No :</td><td style="font-weight: bold; color: #0f172a;">0171290001972</td></tr>
+                <tr><td style="padding: 2px 10px 2px 0; font-weight: 600;">A/C Name :</td><td style="font-weight: bold; color: #0f172a;">ABDUL MUMIN PABEL</td></tr>
+                <tr><td style="padding: 2px 10px 2px 0; font-weight: 600; vertical-align: top;">Bank Details :</td><td style="font-weight: bold; color: #0f172a;">Al-Arafah Islami Bank PLC.<br/><span style="font-size: 10px; color: #64748b; font-weight: normal;">UTTARA MODEL TOWN BRANCH(AD)</span></td></tr>
+              </table>
+            </div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px; font-size: 13px;">
+            <thead>
+              <tr style="color: #94a3b8; text-transform: uppercase; font-size: 12px; font-weight: bold; border-bottom: 2px solid #f1f5f9;">
+                <th style="padding: 12px 10px; text-align: left; width: 50px;">SL.</th>
+                <th style="padding: 12px 10px; text-align: left;">Product Description</th>
+                <th style="padding: 12px 10px; text-align: right; width: 100px;">Price</th>
+                <th style="padding: 12px 10px; text-align: center; width: 60px;">Qty</th>
+                <th style="padding: 12px 10px; text-align: right; width: 100px;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 14px 10px; font-weight: bold; color: #475569;">01.</td>
+                <td style="padding: 14px 10px;">
+                  <strong style="color: #0f172a; font-size: 14px;">${displayServiceName}</strong><br/>
+                  <span style="font-size: 11px; color: #64748b;">Custom Project Scope & Creative Production</span>
+                </td>
+                <td style="padding: 14px 10px; text-align: right; font-weight: 600; color: #0f172a;">Custom</td>
+                <td style="padding: 14px 10px; text-align: center; color: #0f172a;">1</td>
+                <td style="padding: 14px 10px; text-align: right; font-weight: bold; color: #0f172a;">Custom Quote</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 14px 10px; font-weight: bold; color: #475569;">02.</td>
+                <td style="padding: 14px 10px; color: #334155;">
+                  🐢 Standard Delivery Timeline
+                </td>
+                <td style="padding: 14px 10px; text-align: right; color: #0f172a;">$0.00</td>
+                <td style="padding: 14px 10px; text-align: center; color: #0f172a;">1</td>
+                <td style="padding: 14px 10px; text-align: right; font-weight: bold; color: #0f172a;">$0.00</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f8fafc; color: #cbd5e1;">
+                <td style="padding: 12px 10px;">04.</td>
+                <td style="padding: 12px 10px;">-</td>
+                <td style="padding: 12px 10px; text-align: right;">-</td>
+                <td style="padding: 12px 10px; text-align: center;">-</td>
+                <td style="padding: 12px 10px; text-align: right;">-</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f8fafc; color: #cbd5e1;">
+                <td style="padding: 12px 10px;">05.</td>
+                <td style="padding: 12px 10px;">-</td>
+                <td style="padding: 12px 10px; text-align: right;">-</td>
+                <td style="padding: 12px 10px; text-align: center;">-</td>
+                <td style="padding: 12px 10px; text-align: right;">-</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px;">
+            <div style="font-size: 12px; color: #64748b; line-height: 1.8;">
+              <p style="margin: 0;"><strong style="color: #334155;">Email :</strong> team.framempire@gmail.com</p>
+              <p style="margin: 0;"><strong style="color: #334155;">Web :</strong> framempire.com</p>
+              <p style="margin: 0;"><strong style="color: #334155;">Address :</strong> Dhaka, Bangladesh</p>
+              
+              <div style="border-top: 2px solid #334155; margin-top: 15px; padding-top: 10px; max-width: 320px;">
+                <span style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #94a3b8; display: block;">TERMS & CONDITIONS</span>
+                <span style="font-size: 10px; color: #94a3b8;">Automated quote invoice. Custom project brief confirmed.</span>
+              </div>
+            </div>
+
+            <div style="text-align: right;">
+              <div style="font-size: 13px; color: #475569; margin-bottom: 25px;">
+                <p style="margin: 0 0 6px 0;">Sub Total : <strong style="color: #0f172a;">Custom Quote</strong></p>
+                <p style="margin: 0 0 6px 0;">Tax : <strong style="color: #0f172a;">$0.00</strong></p>
+                <p style="margin: 0 0 10px 0; color: #16a34a; font-weight: bold;">Discount : <strong style="color: #16a34a;">Custom Quote</strong></p>
+                <p style="margin: 0; font-size: 18px; font-weight: 900; color: #16a34a;">Total : Custom Quote</p>
+              </div>
+
+              <div style="font-size: 11px; font-weight: 900; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase;">
+                SIGNATURE
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(tempDiv);
+
+      const opt = {
+        margin: 0.15,
+        filename: `Invoice_${invoiceId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      const pdfBlob = await window.html2pdf().set(opt).from(tempDiv.children[0]).output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Invoice_${invoiceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
     } catch (err) {
       console.error('Download PDF error:', err);
     } finally {
+      if (tempDiv && document.body.contains(tempDiv)) {
+        document.body.removeChild(tempDiv);
+      }
       setIsDownloadingPdf(false);
     }
   };
@@ -310,8 +437,8 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-cyan-500/30 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/30 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Modal Header Controls */}
-        <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3 relative z-20">
+        {/* Top Header & Always-Active Close Button */}
+        <div className="flex items-center justify-between border-b border-cyan-500/30 pb-3 relative z-30">
           <div className="flex items-center gap-3">
             <img src="/framempire_logo_white.png" alt="FramEmpire Studio" className="h-8 sm:h-9 object-contain drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]" />
             <div>
@@ -325,7 +452,7 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
           <button
             type="button"
             onClick={resetFormState}
-            className="w-9 h-9 rounded-full bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-slate-700 relative z-30 shadow-lg"
+            className="w-9 h-9 rounded-full bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-slate-700 relative z-50 shadow-lg"
             title="Close Window"
           >
             <X className="w-5 h-5 pointer-events-none" />
@@ -442,7 +569,7 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
           </form>
         ) : (
           /* SUBMITTED SUCCESS & OFFICIAL INVOICE CARD MATCHING USER DESIGN SCREEN */
-          <div className="space-y-4 relative z-10 animate-fade-in text-left max-h-[78vh] overflow-y-auto pr-1">
+          <div className="space-y-4 relative z-10 animate-fade-in text-left max-h-[75vh] overflow-y-auto pr-1">
             
             <div className="flex items-center justify-between bg-cyan-950/80 border border-cyan-500/40 p-3.5 rounded-2xl">
               <div className="flex items-center gap-3">
@@ -470,7 +597,7 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
             </div>
 
             {/* EXACT OFFICIAL FRAMEMPIRE INVOICE CONTAINER MATCHING USER IMAGE */}
-            <div id="framempire-official-invoice-node" className="bg-white text-slate-800 p-6 sm:p-8 rounded-2xl border-2 border-slate-200 shadow-2xl relative overflow-hidden font-sans space-y-6">
+            <div className="bg-white text-slate-800 p-6 sm:p-8 rounded-2xl border-2 border-slate-200 shadow-2xl relative overflow-hidden font-sans space-y-6">
               
               {/* Top Header: Logo + Invoice ID + Vertical Watermark */}
               <div className="flex items-start justify-between">
@@ -482,8 +609,8 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
                   </div>
                 </div>
 
-                {/* Vertical INVOICE Watermark Header */}
-                <div className="writing-mode-vertical text-3xl sm:text-4xl font-black text-slate-300 tracking-[6px] uppercase leading-none select-none">
+                {/* INVOICE Watermark Header */}
+                <div className="text-3xl sm:text-4xl font-black text-slate-300 tracking-[6px] uppercase leading-none select-none">
                   INVOICE
                 </div>
               </div>
