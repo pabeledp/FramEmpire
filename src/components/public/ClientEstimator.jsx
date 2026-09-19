@@ -1,243 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  X, Sparkles, Calculator, CheckCircle2, Send, Clock, DollarSign, 
-  Flame, Tag, Zap, ArrowRight, ArrowLeft, ShieldCheck, Palette, Film, Code2, Download, Printer, Copy, Check, FileText, MessageSquare, CreditCard, Ticket 
+  X, Send, CheckCircle2, Clock, ShieldCheck, Palette, Film, Code2, Download, Copy, Check, MessageSquare, ExternalLink, Sparkles, FileText, Link as LinkIcon
 } from 'lucide-react';
 import { AGENCY_INFO } from '../../data/creativeData';
 
-export default function ClientEstimator({ isOpen, onClose, initialService = 'graphic-design' }) {
-  const [step, setStep] = useState(1); // 1: Service, 2: Billing, 3: Scope & Packages, 4: Summary & Submit
-
-  // Wizard Data State
-  const [service, setService] = useState(initialService);
-  const [customServiceText, setCustomServiceText] = useState('');
-  
-  const [billingType, setBillingType] = useState('project');
-  const [customBillingText, setCustomBillingText] = useState('');
-
-  const [packageId, setPackageId] = useState('starter');
-  const [expressDelivery, setExpressDelivery] = useState(false);
-  const [customRequirementText, setCustomRequirementText] = useState('');
-
-  // Coupon Engine State (Default pre-applied WEL50 = 50%)
-  const [couponInput, setCouponInput] = useState('WEL50');
-  const [appliedCoupon, setAppliedCoupon] = useState({ 
-    code: 'WEL50', 
-    percent: 50, 
-    isValid: true, 
-    message: '🎉 Coupon WEL50 Applied! (50% OFF Discount Added)' 
+const loadScript = (src) => {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
   });
-  const [couponError, setCouponError] = useState('');
+};
 
-  const [additionalNotes, setAdditionalNotes] = useState('');
+const SERVICE_OPTIONS = [
+  { id: 'graphic-design', label: 'Graphic Design & Branding', icon: Palette, color: 'text-blue-400 bg-blue-950/60 border-blue-500/40' },
+  { id: 'video-editing', label: 'Video Editing & Motion Cuts', icon: Film, color: 'text-indigo-400 bg-indigo-950/60 border-indigo-500/40' },
+  { id: 'web-dev', label: 'Web & Interactive Dev', icon: Code2, color: 'text-cyan-400 bg-cyan-950/60 border-cyan-500/40' },
+];
+
+export default function ClientEstimator({ isOpen, onClose, initialService = 'graphic-design' }) {
+  const [selectedService, setSelectedService] = useState(initialService);
+  const [customServiceText, setCustomServiceText] = useState('');
   const [contactInfo, setContactInfo] = useState('');
+  const [projectDetails, setProjectDetails] = useState('');
+  const [referenceLinks, setReferenceLinks] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  
   const [copiedInvoice, setCopiedInvoice] = useState(false);
   const [invoiceId, setInvoiceId] = useState('');
   const [issueDate, setIssueDate] = useState('');
 
+  useEffect(() => {
+    if (initialService) {
+      const exists = SERVICE_OPTIONS.some(s => s.id === initialService);
+      if (exists) {
+        setSelectedService(initialService);
+      } else {
+        setSelectedService('graphic-design');
+      }
+    }
+  }, [initialService]);
+
   if (!isOpen) return null;
 
-  // Dynamic Coupon Code Engine
-  const handleApplyCoupon = (e) => {
-    if (e) e.preventDefault();
-    const rawCode = couponInput.trim().toUpperCase();
-    if (!rawCode) {
-      setAppliedCoupon({ code: '', percent: 0, isValid: false, message: '' });
-      setCouponError('Please enter a coupon code.');
+  const activeServiceObj = SERVICE_OPTIONS.find(s => s.id === selectedService);
+  const displayServiceName = customServiceText.trim() || (activeServiceObj ? activeServiceObj.label : 'Custom Creative Project');
+
+  const handleSubmitBrief = async (e) => {
+    e.preventDefault();
+    if (!contactInfo.trim()) {
+      alert('Please enter your Email, Phone or WhatsApp number so we can reach you.');
       return;
     }
 
-    const matchNumber = rawCode.match(/\d+/);
-    let extractedPercent = 0;
-
-    if (matchNumber) {
-      extractedPercent = parseInt(matchNumber[0], 10);
+    if (!projectDetails.trim()) {
+      alert('Please describe your project requirements, vision or timeline.');
+      return;
     }
 
-    if (extractedPercent > 90) extractedPercent = 90;
-    if (extractedPercent < 0) extractedPercent = 0;
-
-    if (extractedPercent > 0) {
-      setAppliedCoupon({
-        code: rawCode,
-        percent: extractedPercent,
-        isValid: true,
-        message: `🎉 Coupon ${rawCode} Applied! (${extractedPercent}% OFF Discount Added)`
-      });
-      setCouponError('');
-    } else {
-      setAppliedCoupon({
-        code: rawCode,
-        percent: 50,
-        isValid: true,
-        message: `🎉 Coupon ${rawCode} Applied! (50% OFF Discount Added)`
-      });
-      setCouponError('');
-    }
-  };
-
-  // Dynamic Base Packages Data
-  const servicePackagesMap = {
-    'graphic-design': [
-      { id: 'starter', title: 'Starter Branding Task', desc: '1 Social Post / Banner / Resize / Background Removal.', basePrice: 10 },
-      { id: 'standard', title: 'Standard Branding Pack', desc: 'Logo Design, Social Media Kit, Style Guide.', basePrice: 300 },
-      { id: 'retainer', title: 'Monthly Design Retainer', desc: '15-20 Social Media Graphics + Ads Banners/mo.', basePrice: 300 },
-    ],
-    'motion-graphics': [
-      { id: 'starter', title: 'Micro Motion Asset', desc: 'Logo Animation / Animated Icon / Lower Thirds.', basePrice: 30 },
-      { id: 'standard', title: 'Social Reel / Shorts Motion', desc: '15–30 sec Kinetic Motion Graphics Video.', basePrice: 100 },
-      { id: 'retainer', title: 'Full Explainer / Promo Motion', desc: '60 sec+ 2D/3D Animation Video.', basePrice: 400 },
-    ],
-    'video-editing': [
-      { id: 'starter', title: 'Reel / Short Video Cut', desc: 'TikTok, Reel, Shorts (under 1 min, Subtitles, Hooks).', basePrice: 20 },
-      { id: 'standard', title: 'Standard YouTube / Promo Edit', desc: 'Vlogs, Commercial Ads, Explainer (5–10 mins).', basePrice: 80 },
-      { id: 'retainer', title: 'Corporate / Long-form Editing', desc: 'Advanced Editing, DaVinci Color Grade, Audio Cleanup.', basePrice: 300 },
-    ],
-    'web-dev': [
-      { id: 'starter', title: 'Single Landing Page Build', desc: 'UI Design or Figma-to-Code Landing Page.', basePrice: 100 },
-      { id: 'standard', title: 'Full Multi-Page Web App', desc: 'Full Web Design & Development Architecture.', basePrice: 400 },
-      { id: 'retainer', title: 'Monthly Web Retainer Support', desc: 'Bug Fixes, Updates, Design Tweaks.', basePrice: 200 },
-    ]
-  };
-
-  const currentPackages = servicePackagesMap[service] || servicePackagesMap['graphic-design'];
-  const selectedPkg = currentPackages.find(p => p.id === packageId) || currentPackages[0];
-
-  // Dynamic Calculation Engine
-  const baseOriginal = selectedPkg.basePrice;
-  const discountPercent = appliedCoupon.isValid ? appliedCoupon.percent : 0;
-  const discountAmount = Math.round((baseOriginal * discountPercent) / 100);
-  const baseDiscounted = baseOriginal - discountAmount;
-  const expressSurcharge = expressDelivery ? 10 : 0;
-
-  const finalOriginalTotal = baseOriginal + expressSurcharge;
-  const finalPayableTotal = baseDiscounted + expressSurcharge;
-
-  const serviceLabels = {
-    'graphic-design': 'Graphic Design',
-    'motion-graphics': 'Motion Graphics',
-    'video-editing': 'Video Editing',
-    'web-dev': 'Web Design & Dev'
-  };
-
-  // WhatsApp Link targeting 01615288259 (+8801615288259)
-  const whatsAppUrl = `https://wa.me/8801615288259?text=${encodeURIComponent(
-    `Hi FramEmpire Studio, I submitted brief ${invoiceId} for ${customServiceText || serviceLabels[service]} ($${finalPayableTotal} USD with Coupon ${appliedCoupon.code}). I would like to connect on WhatsApp.`
-  )}`;
-
-  // Helper to dynamically load external script if not already present
-  const loadScript = (src) => {
-    return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`Failed to load ${src}`));
-      document.head.appendChild(script);
-    });
-  };
-
-  // Helper to generate clean Invoice HTML for PDF Base64 compilation
-  const getInvoiceHtmlForPdf = (invId, invDate) => {
-    return `
-      <div style="font-family: Arial, sans-serif; padding: 25px; background: #ffffff; color: #1e293b; max-width: 800px; margin: 0 auto; border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00f3ff; padding-bottom: 15px; margin-bottom: 20px;">
-          <div>
-            <h1 style="margin: 0; font-size: 24px; color: #0f172a; font-weight: 800;">FRAMEMPIRE STUDIO</h1>
-            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">A Revolution of Animation & Digital Engineering</p>
-          </div>
-          <div style="text-align: right;">
-            <span style="font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 2px; text-transform: uppercase;">INVOICE</span>
-            <p style="margin: 3px 0 0 0; font-size: 11px; color: #475569;"><b>ID:</b> ${invId}</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #475569;"><b>Date:</b> ${invDate}</p>
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px;">
-          <div style="flex: 1;">
-            <h4 style="margin: 0 0 5px 0; font-size: 12px; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px;">INVOICE TO:</h4>
-            <p style="margin: 0; font-size: 12px; font-weight: 700; color: #0f172a;">${contactInfo}</p>
-            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Service: ${customServiceText || serviceLabels[service]}</p>
-          </div>
-          <div style="flex: 1;">
-            <h4 style="margin: 0 0 5px 0; font-size: 12px; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px;">PAYMENT INFO:</h4>
-            <p style="margin: 0; font-size: 11px; color: #334155;"><b>AC No:</b> 0171290001972</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>A/C Name:</b> ABDUL MUMIN PABEL</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Bank:</b> Al-Arafah Islami Bank PLC.</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Branch:</b> UTTARA MODEL TOWN BRANCH(AD)</p>
-          </div>
-        </div>
-
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
-          <thead>
-            <tr style="background: #2A2B30; color: #ffffff;">
-              <th style="padding: 8px; text-align: center; width: 40px;">SL.</th>
-              <th style="padding: 8px; text-align: left;">Product Description</th>
-              <th style="padding: 8px; text-align: right;">Price</th>
-              <th style="padding: 8px; text-align: center; width: 40px;">Qty</th>
-              <th style="padding: 8px; text-align: right; width: 80px;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 8px; text-align: center; font-weight: bold;">01.</td>
-              <td style="padding: 8px;">
-                <b>${selectedPkg.title}</b><br/>
-                <span style="font-size: 10px; color: #64748b;">${selectedPkg.desc} (${customBillingText || billingType})</span>
-              </td>
-              <td style="padding: 8px; text-align: right;">$${baseOriginal}.00</td>
-              <td style="padding: 8px; text-align: center;">1</td>
-              <td style="padding: 8px; text-align: right; font-weight: bold;">$${baseOriginal}.00</td>
-            </tr>
-            ${expressDelivery ? `
-            <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-              <td style="padding: 8px; text-align: center; font-weight: bold;">02.</td>
-              <td style="padding: 8px;">⚡ Express Fast Turnaround (24-48 hrs)</td>
-              <td style="padding: 8px; text-align: right;">$${expressSurcharge}.00</td>
-              <td style="padding: 8px; text-align: center;">1</td>
-              <td style="padding: 8px; text-align: right; font-weight: bold;">$${expressSurcharge}.00</td>
-            </tr>
-            ` : ''}
-          </tbody>
-        </table>
-
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;">
-          <div style="font-size: 10px; color: #64748b; flex: 1;">
-            <p style="margin: 0 0 5px 0;"><b>Coupon Discount:</b> ${appliedCoupon.code || 'None'} (${discountPercent}% OFF)</p>
-            <p style="margin: 0; font-style: italic;">* For alternative payment channels outside bank transfer, contact WhatsApp: +880 1615-288259</p>
-          </div>
-          <div style="width: 220px; text-align: right; font-size: 12px;">
-            <p style="margin: 0 0 4px 0; color: #475569;">Subtotal: <b>$${finalOriginalTotal}.00</b></p>
-            <p style="margin: 0 0 4px 0; color: #15803d;">Discount (-${discountPercent}%): <b>-$${discountAmount}.00</b></p>
-            <div style="background: #2A2B30; color: #ffffff; padding: 10px; margin-top: 8px; border-radius: 6px;">
-              <span style="font-size: 13px; font-weight: 800; color: #4ade80;">TOTAL: $${finalPayableTotal}.00 USD</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
     setIsSubmitting(true);
 
     const stamp = Math.floor(100000 + Math.random() * 900000);
     const generatedId = `FE-INV-${stamp}`;
-    const today = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
-    
-    setInvoiceId(generatedId);
-    setIssueDate(today);
+    const today = new Date().toLocaleDateString('en-GB');
+
     setInvoiceId(generatedId);
     setIssueDate(today);
 
-    // 1. Render exact visual web invoice DOM container and capture via html2pdf.js Blob output
+    // 1. Render visual order invoice container in offscreen DOM for html2pdf Blob capture
     let base64String = '';
     const tempDiv = document.createElement('div');
     tempDiv.style.position = 'fixed';
@@ -251,79 +88,47 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00f3ff; padding-bottom: 15px; margin-bottom: 20px;">
           <div>
             <h1 style="margin: 0; font-size: 22px; color: #0f172a; font-weight: 900; letter-spacing: 1px;">FRAMEMPIRE STUDIO</h1>
-            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">A Revolution of Animation & Digital Engineering</p>
-            <p style="margin: 8px 0 0 0; font-size: 12px; color: #475569;"><b>Invoice ID:</b> ${generatedId}</p>
+            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">A Revolution of Digital Engineering</p>
+            <p style="margin: 8px 0 0 0; font-size: 12px; color: #475569;"><b>Order Brief ID:</b> ${generatedId}</p>
             <p style="margin: 2px 0 0 0; font-size: 12px; color: #475569;"><b>Date:</b> ${today}</p>
           </div>
-          <div style="background: #2A2B30; color: #ffffff; padding: 15px 25px; font-weight: 900; font-size: 18px; letter-spacing: 3px; border-radius: 6px;">
-            INVOICE
+          <div style="background: #2A2B30; color: #ffffff; padding: 15px 25px; font-weight: 900; font-size: 16px; letter-spacing: 2px; border-radius: 6px;">
+            PROJECT BRIEF
           </div>
         </div>
 
         <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
           <div style="flex: 1;">
-            <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">INVOICE TO:</h4>
-            <p style="margin: 0; font-size: 13px; font-weight: bold; color: #0f172a;">${contactInfo || 'Valued Client'}</p>
-            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Service: ${customServiceText || serviceLabels[service]}</p>
+            <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">CLIENT CONTACT:</h4>
+            <p style="margin: 0; font-size: 13px; font-weight: bold; color: #0f172a;">${contactInfo}</p>
+            <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Requested Service: ${displayServiceName}</p>
           </div>
           <div style="flex: 1;">
-            <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">PAYMENT INFO:</h4>
-            <p style="margin: 0; font-size: 11px; color: #334155;"><b>AC No :</b> 0171290001972</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>A/C Name :</b> ABDUL MUMIN PABEL</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Bank :</b> Al-Arafah Islami Bank PLC.</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Branch :</b> UTTARA MODEL TOWN BRANCH(AD)</p>
-            <p style="margin: 5px 0 0 0; font-size: 10px; color: #64748b; font-style: italic;">* For alternative payment channels, WhatsApp: +880 1615-288259</p>
+            <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">STUDIO DIRECT CONTACT:</h4>
+            <p style="margin: 0; font-size: 11px; color: #334155;"><b>Direct Phone :</b> +880 1615-288259</p>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Official Email :</b> team.framempire@gmail.com</p>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Website :</b> www.framempire.com</p>
           </div>
         </div>
 
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 12px;">
-          <thead>
-            <tr style="background: #2A2B30; color: #ffffff;">
-              <th style="padding: 10px; text-align: center; width: 40px;">SL.</th>
-              <th style="padding: 10px; text-align: left;">Product Description</th>
-              <th style="padding: 10px; text-align: right;">Price</th>
-              <th style="padding: 10px; text-align: center; width: 40px;">Qty</th>
-              <th style="padding: 10px; text-align: right; width: 80px;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 10px; text-align: center; font-weight: bold;">01.</td>
-              <td style="padding: 10px;">
-                <b>${selectedPkg.title}</b><br/>
-                <span style="font-size: 10px; color: #64748b;">${selectedPkg.desc} (${customBillingText || billingType})</span>
-              </td>
-              <td style="padding: 10px; text-align: right;">$${baseOriginal}.00</td>
-              <td style="padding: 10px; text-align: center;">1</td>
-              <td style="padding: 10px; text-align: right; font-weight: bold;">$${baseOriginal}.00</td>
-            </tr>
-            ${expressDelivery ? `
-            <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-              <td style="padding: 10px; text-align: center; font-weight: bold;">02.</td>
-              <td style="padding: 10px;">⚡ Express Fast Turnaround (24-48 hrs)</td>
-              <td style="padding: 10px; text-align: right;">$${expressSurcharge}.00</td>
-              <td style="padding: 10px; text-align: center;">1</td>
-              <td style="padding: 10px; text-align: right; font-weight: bold;">$${expressSurcharge}.00</td>
-            </tr>
-            ` : ''}
-          </tbody>
-        </table>
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; border-radius: 6px; margin-bottom: 20px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #0f172a;">CLIENT CUSTOM PROJECT REQUIREMENTS & VISION:</h4>
+          <p style="margin: 0; font-size: 12px; color: #334155; line-height: 1.6; whitespace: pre-wrap;">${projectDetails.replace(/\n/g, '<br/>')}</p>
+        </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
-          <div style="background: #2A2B30; color: #ffffff; padding: 15px; font-size: 11px; width: 55%; border-radius: 4px;">
-            <p style="margin: 0;"><b>Email :</b> team.framempire@gmail.com</p>
-            <p style="margin: 3px 0;"><b>Web :</b> framempire.com</p>
-            <p style="margin: 0;"><b>Address :</b> Dhaka, Bangladesh</p>
-            <div style="border-top: 1px solid #475569; margin-top: 10px; padding-top: 8px; font-size: 10px; color: #cbd5e1;">
-              <b>Terms & Conditions:</b> Discount claimed via coupon code ${appliedCoupon.code} (${discountPercent}% OFF).
-            </div>
+        ${referenceLinks.trim() ? `
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 11px; color: #334155;">
+          <b>Reference / Drive Links:</b> ${referenceLinks}
+        </div>
+        ` : ''}
+
+        <div style="background: #2A2B30; color: #ffffff; padding: 15px; font-size: 11px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <p style="margin: 0;"><b>FramEmpire Studio</b> • Dhaka, Bangladesh</p>
+            <p style="margin: 3px 0 0 0; color: #cbd5e1;">Our team will review your brief and contact you within 2-4 hours with a custom quote.</p>
           </div>
-          <div style="width: 40%; text-align: right; font-size: 12px;">
-            <p style="margin: 0 0 5px 0; color: #475569;">Sub Total: <b>$${finalOriginalTotal}.00</b></p>
-            <p style="margin: 0 0 5px 0; color: #16a34a;">Discount (${appliedCoupon.code}): <b>-$${discountAmount}.00</b></p>
-            <div style="background: #2A2B30; color: #ffffff; padding: 12px; font-weight: bold; font-size: 15px; margin-top: 8px; border-radius: 4px;">
-              Total: <span style="color: #4ade80;">$${finalPayableTotal}.00 USD</span>
-            </div>
+          <div style="font-weight: bold; font-size: 13px; color: #4ade80;">
+            STATUS: BRIEF SUBMITTED
           </div>
         </div>
       </div>
@@ -334,8 +139,8 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
 
       const opt = {
-        margin: 0.1,
-        filename: `Invoice_${generatedId}.pdf`,
+        margin: 0.15,
+        filename: `Project_Brief_${generatedId}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
@@ -353,26 +158,26 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
         };
       });
     } catch (err) {
-      console.log('html2pdf exact DOM capture error:', err);
+      console.log('html2pdf capture error:', err);
     } finally {
       if (document.body.contains(tempDiv)) {
         document.body.removeChild(tempDiv);
       }
     }
 
-    // 2. Dispatch POST payload to Google Apps Script Web App Endpoint using mode: "no-cors"
+    // 2. Dispatch POST payload to Google Apps Script Endpoint
     const googleWebAppUrl = 'https://script.google.com/macros/s/AKfycbwp0iTjxYeJMktukdeqWkzZuMxolf-91_hGGZ0Cml-d5RoXLDoWReEChTsbpSBfwHZD/exec';
     
     const googlePayload = {
-      client_email: contactInfo || '',
-      selected_service: customServiceText || serviceLabels[service] || 'Creative Service',
-      billing_model: customBillingText || (billingType === 'monthly' ? 'Monthly Retainer' : 'One-Time Project'),
-      package_name: selectedPkg.title || 'Selected Package',
-      final_price: `$${finalPayableTotal} USD${billingType === 'monthly' ? ' / mo' : ''}`,
-      pdfBase64: base64String || ''
+      client_email: contactInfo,
+      selected_service: displayServiceName,
+      package_name: 'Custom Project Brief',
+      final_price: 'Custom Quote Request',
+      pdfBase64: base64String || '',
+      custom_details: projectDetails,
+      reference_links: referenceLinks
     };
 
-    // Send payload to Google Apps Script
     try {
       await fetch(googleWebAppUrl, {
         method: 'POST',
@@ -382,874 +187,315 @@ export default function ClientEstimator({ isOpen, onClose, initialService = 'gra
         },
         body: JSON.stringify(googlePayload)
       });
-      console.log('Exact visual web invoice uploaded successfully to Google Apps Script!');
     } catch (gasErr) {
       console.log('Google Apps Script submission dispatch error:', gasErr);
-    }
-
-    // 3. Web3Forms Backup Notification Email Dispatch
-    const emailSubject = `🚀 New Brief & Auto Invoice ${generatedId}: ${customServiceText || serviceLabels[service]} ($${finalPayableTotal} USD)`;
-    const emailBody = `FRAMEMPIRE OFFICIAL AUTO-GENERATED INVOICE (${generatedId})
-------------------------------------------------------
-Client Contact: ${contactInfo}
-Service Needed: ${customServiceText || serviceLabels[service]}
-Package Selected: ${selectedPkg.title} (${selectedPkg.desc})
-Billing Model: ${customBillingText || (billingType === 'monthly' ? 'Monthly Retainer' : 'One-Time Project')}
-Delivery Speed: ${expressDelivery ? 'Express Fast Delivery (+$10 USD)' : 'Standard Delivery (Free)'}
-
-COUPON & FINANCIAL BREAKDOWN:
-- Coupon Code Applied: ${appliedCoupon.code || 'None'} (${discountPercent}% OFF)
-- Subtotal Original: $${finalOriginalTotal} USD
-- Discount Applied: -${discountPercent}% (-$${discountAmount} USD)
-- Express Speed Surcharge: $${expressSurcharge} USD
-- TOTAL PAYABLE QUOTE: $${finalPayableTotal} USD ${billingType === 'monthly' ? '/ month' : ''}
-
-CUSTOM REQUIREMENTS:
-${customRequirementText || 'None'}
-
-Issue Date: ${today}
-Studio: FramEmpire (A Revolution of Animation)`;
-
-    try {
-      await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          access_key: '34d193fa-d07b-40fa-87bb-7b56a337e7df',
-          subject: emailSubject,
-          to_email: 'team.framempire@gmail.com',
-          from_name: 'FramEmpire Auto Invoice System',
-          invoice_id: generatedId,
-          contact_info: contactInfo,
-          coupon_applied: `${appliedCoupon.code} (${discountPercent}% OFF)`,
-          service: customServiceText || serviceLabels[service],
-          package: selectedPkg.title,
-          final_quote: `$${finalPayableTotal} USD`,
-          notes: emailBody
-        })
-      });
-    } catch (err) {
-      console.log('Background submission dispatch:', err);
     }
 
     setIsSubmitting(false);
     setSubmitted(true);
   };
 
-  // 100% PERFECT MATCH DEDICATED PRINT WINDOW ENGINE (FramEmpire Official Template Layout)
-  const handlePrintInvoice = () => {
-    const printWin = window.open('', '_blank', 'width=900,height=1150');
-    if (!printWin) return;
-
-    const printableHTML = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Invoice ${invoiceId} - FramEmpire Studio</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-          <style>
-            body { font-family: 'Montserrat', sans-serif; background: #ffffff; color: #1e293b; margin: 0; padding: 0; }
-            @page { size: portrait; margin: 0mm; }
-          </style>
-        </head>
-        <body class="p-0 bg-white">
-          <div class="max-w-[800px] mx-auto bg-white min-h-[1100px] relative text-slate-800 text-xs shadow-none border border-slate-200">
-            
-            <div class="flex justify-between items-stretch">
-              <div class="p-8 space-y-4 flex-1">
-                <img 
-                  src="/framempire_logo_black.png" 
-                  alt="FramEmpire Studio" 
-                  class="h-14 object-contain mb-2" 
-                />
-
-                <div class="pt-1 text-xs space-y-1 text-slate-600">
-                  <p><strong class="text-slate-800 font-semibold">Invoice :</strong> ${invoiceId}</p>
-                  <p><strong class="text-slate-800 font-semibold">Date :</strong> ${issueDate}</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                  <div>
-                    <h3 class="font-bold text-slate-900 text-sm mb-1">Invoice To:</h3>
-                    <div class="w-12 h-0.5 bg-slate-400 mb-2"></div>
-                    <p class="font-semibold text-slate-800 text-xs">${contactInfo}</p>
-                    <p class="text-[11px] text-slate-500">Service: ${customServiceText || serviceLabels[service]}</p>
-                  </div>
-
-                  <div>
-                    <h3 class="font-bold text-slate-900 text-sm mb-1">Payment Info:</h3>
-                    <p class="text-[11px] text-slate-600"><span class="w-20 inline-block font-semibold">AC No :</span> 0171290001972</p>
-                    <p class="text-[11px] text-slate-600"><span class="w-20 inline-block font-semibold">A/C Name :</span> ABDUL MUMIN PABEL</p>
-                    <p class="text-[11px] text-slate-600"><span class="w-20 inline-block font-semibold">Bank :</span> Al-Arafah Islami Bank PLC.</p>
-                    <p class="text-[11px] text-slate-600"><span class="w-20 inline-block font-semibold">Branch :</span> UTTARA MODEL TOWN BRANCH(AD)</p>
-                    <p class="text-[10px] text-slate-500 pt-1.5 leading-tight italic">* For alternative payment channels outside bank transfer, please contact WhatsApp: <strong>+880 1615-288259</strong></p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="w-28 bg-[#2A2B30] flex items-center justify-center text-white">
-                <span class="font-black text-4xl tracking-widest uppercase rotate-90 whitespace-nowrap opacity-90">
-                  INVOICE
-                </span>
-              </div>
+  const handleDownloadInvoicePdf = async () => {
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+      
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0px';
+      tempDiv.style.width = '800px';
+      tempDiv.style.background = '#ffffff';
+      tempDiv.style.color = '#0f172a';
+      tempDiv.innerHTML = `
+        <div class="invoice-container" style="font-family: Arial, sans-serif; padding: 30px; background: #ffffff; color: #0f172a;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00f3ff; padding-bottom: 15px; margin-bottom: 20px;">
+            <div>
+              <h1 style="margin: 0; font-size: 22px; color: #0f172a; font-weight: 900; letter-spacing: 1px;">FRAMEMPIRE STUDIO</h1>
+              <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">A Revolution of Digital Engineering</p>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #475569;"><b>Order Brief ID:</b> ${invoiceId}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #475569;"><b>Date:</b> ${issueDate}</p>
             </div>
-
-            <div class="px-8 pt-4">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr class="bg-[#2A2B30] text-white font-bold">
-                    <th class="p-3 w-12 text-center">SL.</th>
-                    <th class="p-3">Product Description</th>
-                    <th class="p-3 text-right">Price</th>
-                    <th class="p-3 text-center w-16">Qty</th>
-                    <th class="p-3 text-right w-24">Total</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                  <tr class="bg-white">
-                    <td class="p-3 text-center font-medium">01.</td>
-                    <td class="p-3">
-                      <strong class="text-slate-900 block font-semibold">${selectedPkg.title}</strong>
-                      <span class="text-[10px] text-slate-500">${selectedPkg.desc} (${customBillingText || billingType})</span>
-                    </td>
-                    <td class="p-3 text-right font-medium">$${baseOriginal}.00</td>
-                    <td class="p-3 text-center">1</td>
-                    <td class="p-3 text-right font-bold">$${baseOriginal}.00</td>
-                  </tr>
-
-                  <tr class="bg-[#EBEBEB]">
-                    <td class="p-3 text-center font-medium">02.</td>
-                    <td class="p-3 font-medium">
-                      ${expressDelivery ? '⚡ Express Fast Turnaround (24-48 hrs)' : '🐢 Standard Delivery Timeline'}
-                    </td>
-                    <td class="p-3 text-right font-medium">$${expressSurcharge}.00</td>
-                    <td class="p-3 text-center">1</td>
-                    <td class="p-3 text-right font-bold">$${expressSurcharge}.00</td>
-                  </tr>
-
-                  ${customRequirementText ? `
-                  <tr class="bg-white">
-                    <td class="p-3 text-center font-medium">03.</td>
-                    <td class="p-3 italic text-slate-600">Client Instruction: ${customRequirementText}</td>
-                    <td class="p-3 text-right">-</td>
-                    <td class="p-3 text-center">-</td>
-                    <td class="p-3 text-right">-</td>
-                  </tr>
-                  ` : ''}
-
-                  <tr class="bg-[#EBEBEB] opacity-40"><td class="p-3 text-center">04.</td><td class="p-3">-</td><td class="p-3 text-right">-</td><td class="p-3 text-center">-</td><td class="p-3 text-right">-</td></tr>
-                  <tr class="bg-white opacity-40"><td class="p-3 text-center">05.</td><td class="p-3">-</td><td class="p-3 text-right">-</td><td class="p-3 text-center">-</td><td class="p-3 text-right">-</td></tr>
-                </tbody>
-              </table>
+            <div style="background: #2A2B30; color: #ffffff; padding: 15px 25px; font-weight: 900; font-size: 16px; letter-spacing: 2px; border-radius: 6px;">
+              PROJECT BRIEF
             </div>
-
-            <div class="px-8 pt-6 flex justify-between items-start">
-              <div class="w-7/12 bg-[#2A2B30] text-white p-5 rounded-none space-y-3 text-[11px]">
-                <div class="space-y-1 text-slate-300">
-                  <p><strong class="text-white">Email :</strong> team.framempire@gmail.com</p>
-                  <p><strong class="text-white">Web :</strong> framempire.com</p>
-                  <p><strong class="text-white">Address :</strong> Dhaka, Bangladesh</p>
-                </div>
-                <div class="pt-2 border-t border-slate-700">
-                  <strong class="text-white uppercase font-bold text-[10px] block mb-0.5">Terms & Conditions</strong>
-                  <p class="text-[10px] text-slate-400 leading-tight">
-                    Automated quote invoice. Discount claimed via coupon code ${appliedCoupon.code} (${discountPercent}% OFF).
-                  </p>
-                </div>
-              </div>
-
-              <div class="w-4/12 space-y-4">
-                <table class="w-full text-xs text-right border-collapse">
-                  <tbody>
-                    <tr class="bg-[#EBEBEB]">
-                      <td class="p-2 font-medium text-slate-600">Sub Total :</td>
-                      <td class="p-2 font-bold text-slate-800">$${finalOriginalTotal}.00</td>
-                    </tr>
-                    <tr class="bg-white">
-                      <td class="p-2 font-medium text-slate-600">Tax :</td>
-                      <td class="p-2 font-bold text-slate-800">$0.00</td>
-                    </tr>
-                    <tr class="bg-[#EBEBEB] text-green-700">
-                      <td class="p-2 font-medium">Discount (${appliedCoupon.code}) :</td>
-                      <td class="p-2 font-bold">-$${discountAmount}.00</td>
-                    </tr>
-                    <tr class="bg-[#2A2B30] text-white font-extrabold text-sm">
-                      <td class="p-2.5">Total :</td>
-                      <td class="p-2.5 text-green-400">$${finalPayableTotal}.00</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <div class="pt-8 text-center space-y-1">
-                  <div class="w-32 h-0.5 bg-slate-300 mx-auto"></div>
-                  <span class="text-[11px] font-bold text-slate-600 block uppercase tracking-wider">Signature</span>
-                </div>
-              </div>
-            </div>
-
           </div>
 
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 300);
-            };
-          </script>
-        </body>
-      </html>
-    `;
+          <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 25px;">
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">CLIENT CONTACT:</h4>
+              <p style="margin: 0; font-size: 13px; font-weight: bold; color: #0f172a;">${contactInfo}</p>
+              <p style="margin: 3px 0 0 0; font-size: 11px; color: #64748b;">Requested Service: ${displayServiceName}</p>
+            </div>
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 3px;">STUDIO DIRECT CONTACT:</h4>
+              <p style="margin: 0; font-size: 11px; color: #334155;"><b>Direct Phone :</b> +880 1615-288259</p>
+              <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Official Email :</b> team.framempire@gmail.com</p>
+              <p style="margin: 2px 0 0 0; font-size: 11px; color: #334155;"><b>Website :</b> www.framempire.com</p>
+            </div>
+          </div>
 
-    printWin.document.open();
-    printWin.document.write(printableHTML);
-    printWin.document.close();
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; border-radius: 6px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #0f172a;">CLIENT CUSTOM PROJECT REQUIREMENTS & VISION:</h4>
+            <p style="margin: 0; font-size: 12px; color: #334155; line-height: 1.6; whitespace: pre-wrap;">${projectDetails.replace(/\n/g, '<br/>')}</p>
+          </div>
+
+          ${referenceLinks.trim() ? `
+          <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 11px; color: #334155;">
+            <b>Reference / Drive Links:</b> ${referenceLinks}
+          </div>
+          ` : ''}
+
+          <div style="background: #2A2B30; color: #ffffff; padding: 15px; font-size: 11px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="margin: 0;"><b>FramEmpire Studio</b> • Dhaka, Bangladesh</p>
+              <p style="margin: 3px 0 0 0; color: #cbd5e1;">Our team will review your brief and contact you within 2-4 hours with a custom quote.</p>
+            </div>
+            <div style="font-weight: bold; font-size: 13px; color: #4ade80;">
+              STATUS: BRIEF SUBMITTED
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(tempDiv);
+
+      const opt = {
+        margin: 0.15,
+        filename: `FramEmpire_Project_Brief_${invoiceId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      const pdfBlob = await window.html2pdf().set(opt).from(tempDiv.querySelector('.invoice-container')).output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `FramEmpire_Project_Brief_${invoiceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      document.body.removeChild(tempDiv);
+    } catch (err) {
+      console.error('Download PDF error:', err);
+    }
   };
 
-  const handleCopyInvoiceRef = () => {
-    navigator.clipboard.writeText(`${invoiceId} - Quote: $${finalPayableTotal} USD for ${customServiceText || serviceLabels[service]}`);
+  const handleCopyInvoiceNumber = () => {
+    navigator.clipboard.writeText(invoiceId);
     setCopiedInvoice(true);
-    setTimeout(() => setCopiedInvoice(false), 3000);
+    setTimeout(() => setCopiedInvoice(false), 2000);
   };
 
-  const handleResetAndClose = () => {
+  const resetFormState = () => {
     setSubmitted(false);
-    setStep(1);
     setContactInfo('');
-    setAdditionalNotes('');
-    setCustomRequirementText('');
+    setProjectDetails('');
+    setReferenceLinks('');
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl animate-fadeIn">
-      <div className="neon-card max-w-2xl w-full border-cyan-400 p-5 sm:p-7 relative space-y-5 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-2xl rounded-3xl p-6 sm:p-8 bg-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_0_60px_rgba(0,243,255,0.25)] text-left overflow-hidden my-auto space-y-6">
         
-        {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3">
+        {/* Ambient Top Glow Orbs */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-cyan-500/30 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/30 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-cyan-500/30 pb-4 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-400 shrink-0">
-              <Calculator className="w-4 h-4" />
-            </div>
+            <img src="/framempire_logo_white.png" alt="FramEmpire Studio" className="h-8 sm:h-9 object-contain drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]" />
             <div>
-              <h3 className="font-['Creato_Display'] text-base sm:text-lg font-extrabold text-white">
-                Interactive Project Estimator & Auto-Invoice
+              <h3 className="font-['Creato_Display'] text-base sm:text-lg font-bold text-white tracking-wide">
+                PROJECT BRIEF & QUOTE REQUEST
               </h3>
-              <p className="text-[11px] text-slate-400">Step {step} of 4 • Official Studio Invoice Template</p>
+              <p className="text-[11px] text-cyan-400 font-mono">FramEmpire Studio • Zero Hassle Onboarding</p>
             </div>
           </div>
 
           <button
-            onClick={handleResetAndClose}
-            className="p-1.5 rounded-full bg-slate-900 text-slate-400 hover:text-white border border-cyan-500/30"
+            onClick={resetFormState}
+            className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-slate-700"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Wizard Step Progress Tracker Bar */}
-        {!submitted && (
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { num: 1, label: "1. Service" },
-              { num: 2, label: "2. Billing" },
-              { num: 3, label: "3. Scope" },
-              { num: 4, label: "4. Summary" },
-            ].map(st => (
-              <div
-                key={st.num}
-                onClick={() => st.num < step && !submitted && setStep(st.num)}
-                className={`h-1.5 rounded-full transition-all ${
-                  step >= st.num
-                    ? 'bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_0_10px_rgba(0,243,255,0.4)]'
-                    : 'bg-slate-800'
-                }`}
-                title={st.label}
+        {/* Form Body vs Submitted State */}
+        {!submitted ? (
+          <form onSubmit={handleSubmitBrief} className="space-y-5 relative z-10">
+            
+            {/* Service Selector Pills */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                1. Select Desired Service
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {SERVICE_OPTIONS.map((opt) => {
+                  const IconComp = opt.icon;
+                  const isSelected = selectedService === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedService(opt.id);
+                        setCustomServiceText('');
+                      }}
+                      className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? `${opt.color} shadow-[0_0_15px_rgba(0,243,255,0.2)] scale-[1.02]`
+                          : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:border-cyan-500/30 hover:text-slate-200'
+                      }`}
+                    >
+                      <IconComp className="w-4 h-4 shrink-0" />
+                      <span className="text-xs font-bold leading-tight">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Client Contact Info Field */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                2. Your Contact Details <span className="text-cyan-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={contactInfo}
+                onChange={(e) => setContactInfo(e.target.value)}
+                placeholder="Enter your Email address, Phone or WhatsApp number..."
+                required
+                className="w-full bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-slate-500 outline-none transition-colors shadow-inner"
               />
-            ))}
-          </div>
-        )}
-
-        {/* 🏷️ DYNAMIC COUPON APPLIED BANNER */}
-        {!submitted && (
-          <div className="p-3 rounded-xl bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-cyan-500/20 border border-yellow-500/40 text-yellow-300 text-xs flex items-center justify-between gap-3 shadow-[0_0_15px_rgba(234,179,8,0.15)]">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-yellow-400 fill-yellow-400 shrink-0 animate-bounce" />
-              <span className="font-extrabold text-white text-xs">
-                🏷️ {appliedCoupon.isValid ? appliedCoupon.message : 'Enter Coupon WEL50, WEL40, or WEL30'}
-              </span>
-            </div>
-            <span className="neon-badge text-[8px] border-yellow-400 text-yellow-300 bg-yellow-950/60 shrink-0">
-              {discountPercent}% OFF OFFER 🚀
-            </span>
-          </div>
-        )}
-
-        {submitted ? (
-          /* OFFICIAL FRAMEMPIRE TEMPLATE MATCHING SCREEN INVOICE */
-          <div className="space-y-4 animate-fadeIn">
-            
-            {/* Top Action Bar */}
-            <div className="flex items-center justify-between bg-slate-900/90 border border-cyan-500/30 p-3 rounded-xl">
-              <div className="flex items-center gap-2 text-xs text-green-400 font-bold">
-                <CheckCircle2 className="w-4 h-4 text-green-400" />
-                <span>Official Studio Invoice Generated ({appliedCoupon.code} Applied)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrintInvoice}
-                  className="neon-button-primary py-1.5 px-3 text-xs"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Download PDF / Print</span>
-                </button>
-                <button
-                  onClick={handleResetAndClose}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
             </div>
 
-            {/* OFFICIAL FRAMEMPIRE TEMPLATE SCREEN PREVIEW */}
-            <div id="invoice-preview" className="invoice-container bg-white text-slate-900 rounded-2xl p-5 sm:p-6 text-xs space-y-5 shadow-2xl relative border border-slate-200">
-              
-              {/* Header Row */}
-              <div className="flex justify-between items-stretch border-b border-slate-200 pb-4">
-                <div className="space-y-3 flex-1">
-                  <img 
-                    src="/framempire_logo_black.png" 
-                    alt="FramEmpire Studio" 
-                    className="h-12 sm:h-14 object-contain" 
-                  />
-
-                  <div className="text-xs space-y-0.5 text-slate-600">
-                    <p><strong className="text-slate-900">Invoice :</strong> {invoiceId}</p>
-                    <p><strong className="text-slate-900">Date :</strong> {issueDate}</p>
-                  </div>
-                </div>
-
-                <div className="w-20 bg-[#2A2B30] text-white rounded-xl flex items-center justify-center font-black text-lg tracking-widest rotate-90 uppercase">
-                  INVOICE
-                </div>
-              </div>
-
-              {/* Billing Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div>
-                  <h4 className="font-bold text-slate-900 text-xs mb-1">Invoice To:</h4>
-                  <div className="w-8 h-0.5 bg-slate-400 mb-1.5"></div>
-                  <p className="font-bold text-slate-900 text-xs">{contactInfo}</p>
-                  <p className="text-[11px] text-slate-500">Service: {customServiceText || serviceLabels[service]}</p>
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-slate-900 text-xs mb-1">Payment Info:</h4>
-                  <p className="text-[11px] text-slate-600"><span className="w-16 inline-block font-semibold">AC No :</span> 0171290001972</p>
-                  <p className="text-[11px] text-slate-600"><span className="w-16 inline-block font-semibold">A/C Name :</span> ABDUL MUMIN PABEL</p>
-                  <p className="text-[11px] text-slate-600"><span className="w-16 inline-block font-semibold">Bank :</span> Al-Arafah Islami Bank PLC.</p>
-                  <p className="text-[11px] text-slate-600"><span className="w-16 inline-block font-semibold">Branch :</span> UTTARA MODEL TOWN BRANCH(AD)</p>
-                  <p className="text-[10px] text-slate-500 pt-1.5 leading-tight italic">* For alternative payment channels outside bank transfer, please contact WhatsApp: <a href="https://wa.me/8801615288259" target="_blank" rel="noreferrer" className="text-cyan-600 font-bold hover:underline">+880 1615-288259</a></p>
-                </div>
-              </div>
-
-              {/* Itemization Table */}
-              <div className="border border-slate-300 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-[#2A2B30] text-white font-bold">
-                      <th className="p-2.5 w-10 text-center">SL.</th>
-                      <th className="p-2.5">Product Description</th>
-                      <th className="p-2.5 text-right">Price</th>
-                      <th className="p-2.5 text-center w-12">Qty</th>
-                      <th className="p-2.5 text-right w-20">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    <tr className="bg-white">
-                      <td className="p-2.5 text-center font-bold">01.</td>
-                      <td className="p-2.5">
-                        <strong className="text-slate-900 block">{selectedPkg.title}</strong>
-                        <span className="text-[10px] text-slate-500">{selectedPkg.desc} ({customBillingText || billingType})</span>
-                      </td>
-                      <td className="p-2.5 text-right font-medium">${baseOriginal}.00</td>
-                      <td className="p-2.5 text-center">1</td>
-                      <td className="p-2.5 text-right font-bold">${baseOriginal}.00</td>
-                    </tr>
-
-                    <tr className="bg-[#EBEBEB]">
-                      <td className="p-2.5 text-center font-bold">02.</td>
-                      <td className="p-2.5 font-medium">
-                        {expressDelivery ? '⚡ Express Fast Turnaround (24-48 hrs)' : '🐢 Standard Delivery Timeline'}
-                      </td>
-                      <td className="p-2.5 text-right font-medium">${expressSurcharge}.00</td>
-                      <td className="p-2.5 text-center">1</td>
-                      <td className="p-2.5 text-right font-bold">${expressSurcharge}.00</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Bottom Totals */}
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="w-full sm:w-7/12 bg-[#2A2B30] text-white p-3.5 rounded-xl text-[11px] space-y-2">
-                  <div className="space-y-0.5 text-slate-300">
-                    <p><strong className="text-white">Email :</strong> team.framempire@gmail.com</p>
-                    <p><strong className="text-white">Web :</strong> framempire.com</p>
-                    <p><strong className="text-white">Address :</strong> Dhaka, Bangladesh</p>
-                  </div>
-                  <div className="pt-1.5 border-t border-slate-700">
-                    <strong className="text-white uppercase font-bold text-[9px] block">Terms & Conditions</strong>
-                    <p className="text-[10px] text-slate-400">
-                      Automated quote. Coupon {appliedCoupon.code} applied ({discountPercent}% OFF).
-                    </p>
-                  </div>
-                </div>
-
-                <div className="w-full sm:w-4/12 space-y-2">
-                  <table className="w-full text-xs text-right">
-                    <tbody>
-                      <tr className="bg-[#EBEBEB]"><td className="p-1.5">Sub Total :</td><td className="p-1.5 font-bold">${finalOriginalTotal}.00</td></tr>
-                      <tr className="bg-white"><td className="p-1.5">Tax :</td><td className="p-1.5 font-bold">$0.00</td></tr>
-                      <tr className="bg-[#EBEBEB] text-green-700"><td className="p-1.5 font-semibold">Discount ({appliedCoupon.code}) :</td><td className="p-1.5 font-bold">-${discountAmount}.00</td></tr>
-                      <tr className="bg-[#2A2B30] text-white font-extrabold text-sm"><td className="p-2">Total :</td><td className="p-2 text-green-400">${finalPayableTotal}.00</td></tr>
-                    </tbody>
-                  </table>
-
-                  <div className="pt-4 text-center">
-                    <div className="w-24 h-0.5 bg-slate-300 mx-auto mb-1"></div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Signature</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200">
-                <button
-                  onClick={() => alert(`Redirecting to checkout for ${invoiceId}...`)}
-                  className="neon-button-primary py-2 px-4 text-xs font-extrabold"
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span>💳 Pay Now (${finalPayableTotal} USD)</span>
-                </button>
-
-                <a
-                  href={whatsAppUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-green-600 text-white font-bold text-xs flex items-center gap-1.5 hover:bg-green-700 transition-colors"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>📲 Connect via WhatsApp</span>
-                </a>
-              </div>
-
+            {/* Custom Project Details Textarea */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block flex items-center justify-between">
+                <span>3. Project Requirements & Vision <span className="text-cyan-400">*</span></span>
+                <span className="text-[10px] text-slate-400 font-normal">Describe in your own words</span>
+              </label>
+              <textarea
+                value={projectDetails}
+                onChange={(e) => setProjectDetails(e.target.value)}
+                rows={4}
+                placeholder="Describe your project requirements, goals, preferred timeline, budget ideas, or instructions..."
+                required
+                className="w-full bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl p-4 text-xs sm:text-sm text-white placeholder-slate-500 outline-none transition-colors leading-relaxed shadow-inner resize-none"
+              />
             </div>
 
-          </div>
+            {/* Reference Links Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block flex items-center gap-1.5">
+                <LinkIcon className="w-3.5 h-3.5 text-cyan-400" />
+                <span>4. Reference Links / Moodboard (Optional)</span>
+              </label>
+              <input
+                type="url"
+                value={referenceLinks}
+                onChange={(e) => setReferenceLinks(e.target.value)}
+                placeholder="Paste Google Drive, Dropbox, Pinterest, or YouTube link..."
+                className="w-full bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition-colors shadow-inner"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+                <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>Instant Confirmation & Custom Quote</span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-extrabold text-xs sm:text-sm py-3 px-6 rounded-xl flex items-center gap-2 shadow-[0_0_25px_rgba(0,243,255,0.35)] hover:shadow-[0_0_35px_rgba(0,243,255,0.5)] transition-all cursor-pointer border border-cyan-400 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Clock className="w-4 h-4 animate-spin text-white" />
+                    <span>Processing Brief...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 text-white" />
+                    <span>Submit Project Brief 🚀</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+          </form>
         ) : (
-          <div className="space-y-5 text-xs text-slate-300">
+          /* SUBMITTED SUCCESS & INVOICE SCREEN */
+          <div className="space-y-6 relative z-10 animate-fade-in text-center">
             
-            {/* STEP 1: SERVICE SELECTION */}
-            {step === 1 && (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="space-y-1">
-                  <h4 className="font-['Creato_Display'] text-base font-bold text-white">STEP 1: Which service do you need?</h4>
-                  <p className="text-slate-400 text-xs">Select your main creative discipline to load customized packages.</p>
-                </div>
+            <div className="w-16 h-16 rounded-full bg-cyan-950 border-2 border-cyan-400 text-cyan-400 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(0,243,255,0.4)]">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    { id: 'graphic-design', icon: Palette, title: '🎨 Graphic Design', desc: 'Logos, Social Media Kits, Brand Guides, Vector Art', startPrice: 'Starts at $5' },
-                    { id: 'motion-graphics', icon: Sparkles, title: '🎬 Motion Graphics', desc: '3D Kinetic Animation, Micro Motion, Octane Renders', startPrice: 'Starts at $15' },
-                    { id: 'video-editing', icon: Film, title: '✂️ Video Editing', desc: 'Shorts, Reels, YouTube Commercials, DaVinci Color Grade', startPrice: 'Starts at $10' },
-                    { id: 'web-dev', icon: Code2, title: '🌐 Web Design / Dev', desc: 'Landing Pages, WebGL Apps, Responsive Web Architecture', startPrice: 'Starts at $20' },
-                  ].map((s) => {
-                    const isSelected = service === s.id;
-                    return (
-                      <div
-                        key={s.id}
-                        onClick={() => {
-                          setService(s.id);
-                          setPackageId('starter');
-                        }}
-                        className={`p-4 rounded-xl border cursor-pointer space-y-1.5 transition-all ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-cyan-950/80 to-blue-950/80 border-cyan-400 text-white shadow-[0_0_15px_rgba(0,243,255,0.25)]'
-                            : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-white">{s.title}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                            {s.startPrice}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-300 leading-relaxed">{s.desc}</p>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div className="space-y-1.5">
+              <h3 className="font-['Creato_Display'] text-2xl font-extrabold text-white">
+                PROJECT BRIEF SUBMITTED SUCCESSFULLY! 🎉
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
+                Thank you! We have received your project details. Our creative team will review your brief and contact you within <strong className="text-cyan-300">2-4 hours</strong> with a custom quote.
+              </p>
+            </div>
 
-                <div className="space-y-1 pt-2">
-                  <label className="font-semibold text-slate-400 text-[11px]">
-                    🔳 Don't see what you need? Type your required service here:
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 3D NFT Asset Rendering or Product Packaging Design..."
-                    value={customServiceText}
-                    onChange={(e) => setCustomServiceText(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
-                  />
+            {/* Generated Order Brief Details Card */}
+            <div className="bg-slate-950 p-5 rounded-2xl border border-cyan-500/40 text-left space-y-3 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase">Order Brief ID</span>
+                  <span className="text-sm font-extrabold text-cyan-300 font-mono">{invoiceId}</span>
                 </div>
+                <button
+                  onClick={handleCopyInvoiceNumber}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedInvoice ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedInvoice ? 'Copied ID' : 'Copy ID'}</span>
+                </button>
+              </div>
 
-                <div className="flex justify-end pt-3 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="neon-button-primary py-2.5 px-5 text-xs"
-                  >
-                    <span>Next: Select Billing Type</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase">Contact Info</span>
+                  <span className="font-semibold text-white truncate block">{contactInfo}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase">Requested Service</span>
+                  <span className="font-semibold text-cyan-400 block">{displayServiceName}</span>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* STEP 2: SELECT BILLING TYPE */}
-            {step === 2 && (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="space-y-1">
-                  <h4 className="font-['Creato_Display'] text-base font-bold text-white">STEP 2: Select Billing Type</h4>
-                  <p className="text-slate-400 text-xs">Choose whether this is a single project or a monthly subscription.</p>
-                </div>
+            {/* Action Buttons: WhatsApp & Download PDF */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <a
+                href={`https://wa.me/8801615288259?text=Hi%20FramEmpire%20Studio!%20I%20just%20submitted%20a%20project%20brief%20(${invoiceId})%20for%20${encodeURIComponent(displayServiceName)}.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-3 px-6 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Chat on WhatsApp Direct</span>
+              </a>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div
-                    onClick={() => setBillingType('project')}
-                    className={`p-4 rounded-2xl border cursor-pointer space-y-2 transition-all ${
-                      billingType === 'project'
-                        ? 'bg-gradient-to-r from-cyan-950/80 to-blue-950/80 border-cyan-400 text-white shadow-[0_0_15px_rgba(0,243,255,0.25)]'
-                        : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-white">🎯 One-Time Project</span>
-                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${billingType === 'project' ? 'border-cyan-400 bg-cyan-400' : 'border-slate-600'}`} />
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      Best for single deliverables (e.g. 1 logo, 1 banner, 1 video cut or 1 web page).
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => setBillingType('monthly')}
-                    className={`p-4 rounded-2xl border cursor-pointer space-y-2 transition-all ${
-                      billingType === 'monthly'
-                        ? 'bg-gradient-to-r from-purple-950/80 to-blue-950/80 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.25)]'
-                        : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-white">🔄 Monthly Subscription / Retainer</span>
-                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${billingType === 'monthly' ? 'border-purple-400 bg-purple-400' : 'border-slate-600'}`} />
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      Continuous monthly design/motion/editing support for your growing brand.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-1 pt-2">
-                  <label className="font-semibold text-slate-400 text-[11px]">
-                    🔳 Need Custom Billing? (e.g., Hourly, Milestone-based):
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Milestone-based payment upon 50% project delivery..."
-                    value={customBillingText}
-                    onChange={(e) => setCustomBillingText(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="px-4 py-2 rounded-xl text-slate-400 hover:text-white flex items-center gap-1.5"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    className="neon-button-primary py-2.5 px-5 text-xs"
-                  >
-                    <span>Next: Select Scope & Packages</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: DYNAMIC SERVICE-SPECIFIC SCOPE & PACKAGES */}
-            {step === 3 && (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="space-y-1">
-                  <h4 className="font-['Creato_Display'] text-base font-bold text-white">
-                    STEP 3: Select Package & Scope for <span className="text-cyan-400">{serviceLabels[service]}</span>
-                  </h4>
-                  <p className="text-slate-400 text-xs">Coupon discount automatically applied on all base packages.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {currentPackages.map((pkg) => {
-                    const isSelected = packageId === pkg.id;
-                    const pkgDiscounted = pkg.basePrice - Math.round((pkg.basePrice * discountPercent) / 100);
-                    return (
-                      <div
-                        key={pkg.id}
-                        onClick={() => setPackageId(pkg.id)}
-                        className={`p-3.5 rounded-xl border cursor-pointer space-y-2 transition-all flex flex-col justify-between ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-cyan-950/80 to-blue-950/80 border-cyan-400 text-white shadow-[0_0_15px_rgba(0,243,255,0.25)]'
-                            : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs text-white">{pkg.title}</span>
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                              {discountPercent}% OFF
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-slate-300 leading-relaxed">{pkg.desc}</p>
-                        </div>
-
-                        <div className="text-xs font-bold pt-2 border-t border-slate-800/80">
-                          <span className="line-through text-slate-500 mr-2">${pkg.basePrice}</span>
-                          <span className="text-green-400 text-sm font-extrabold font-['Creato_Display']">
-                            ${pkgDiscounted} USD {billingType === 'monthly' ? '/mo' : ''}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  <label className="font-bold text-white uppercase text-[11px] tracking-wider block">
-                    Select Delivery Speed
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setExpressDelivery(false)}
-                      className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
-                        !expressDelivery
-                          ? 'bg-slate-900 border-cyan-400 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      <div>
-                        <span className="font-bold text-xs block">🐢 Standard Delivery</span>
-                        <span className="text-[10px] text-slate-400">Regular Timeline</span>
-                      </div>
-                      <span className="text-xs font-bold text-green-400">FREE</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setExpressDelivery(true)}
-                      className={`p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
-                        expressDelivery
-                          ? 'bg-slate-900 border-amber-400 text-white shadow-[0_0_12px_rgba(245,158,11,0.2)]'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      <div>
-                        <span className="font-bold text-xs block">⚡ Express Fast Delivery</span>
-                        <span className="text-[10px] text-slate-400">24-48 Hour Turnaround</span>
-                      </div>
-                      <span className="text-xs font-bold text-amber-400">+$10 USD</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1 pt-1">
-                  <label className="font-semibold text-slate-400 text-[11px]">
-                    🔳 I have specific requirements / Not listed above:
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Describe dimensions, reference links, specific software, or custom instructions here..."
-                    value={customRequirementText}
-                    onChange={(e) => setCustomRequirementText(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="px-4 py-2 rounded-xl text-slate-400 hover:text-white flex items-center gap-1.5"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setStep(4)}
-                    className="neon-button-primary py-2.5 px-5 text-xs"
-                  >
-                    <span>Next: Final Summary & Coupon</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 4: FINAL SUMMARY & CLEAN SINGLE-INPUT COUPON ENGINE */}
-            {step === 4 && (
-              <form onSubmit={handleSubmit} className="space-y-4 animate-fadeIn">
-                <div className="space-y-1">
-                  <h4 className="font-['Creato_Display'] text-base font-bold text-white">STEP 4: Final Summary & Order Brief</h4>
-                  <p className="text-slate-400 text-xs">Enter promo coupon code below to claim your discount.</p>
-                </div>
-
-                {/* Clean Single Coupon Code Input Box */}
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-yellow-500/30 space-y-2">
-                  <label className="font-bold text-yellow-300 text-xs flex items-center gap-1.5">
-                    <Ticket className="w-4 h-4 text-yellow-400" />
-                    <span>🎟️ Enter Coupon Code (e.g. WEL50, WEL40, WEL30)</span>
-                  </label>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. WEL50"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value)}
-                      className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono uppercase tracking-wider outline-none focus:border-yellow-400 font-bold"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyCoupon}
-                      className="px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/50 text-yellow-300 font-bold text-xs hover:bg-yellow-500/30 transition-colors shrink-0"
-                    >
-                      Apply Code
-                    </button>
-                  </div>
-
-                  {couponError && (
-                    <p className="text-[11px] text-red-400 font-medium">{couponError}</p>
-                  )}
-                  {appliedCoupon.isValid && (
-                    <p className="text-[11px] text-green-400 font-bold">{appliedCoupon.message}</p>
-                  )}
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-950/90 border border-cyan-500/30 space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-xs text-white font-['Creato_Display']">🛍️ YOUR ESTIMATED SUMMARY</span>
-                    <span className="text-[10px] font-bold text-green-400 bg-green-500/20 px-2 py-0.5 rounded-full border border-green-500/30">
-                      {discountPercent}% OFF APPLIED
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">• Selected Service:</span>
-                      <span className="font-bold text-white">{customServiceText || serviceLabels[service]}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">• Package & Scope:</span>
-                      <span className="font-bold text-cyan-300">{selectedPkg.title}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">• Billing Model:</span>
-                      <span className="font-bold text-purple-300">{customBillingText || (billingType === 'monthly' ? 'Monthly Retainer' : 'One-Time Project')}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">• Delivery Speed:</span>
-                      <span className="font-bold text-amber-300">{expressDelivery ? 'Express Fast (+$10 USD)' : 'Standard Delivery (Free)'}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Original Estimated Price</span>
-                      <span className="line-through text-slate-500 font-bold text-sm">${finalOriginalTotal} USD</span>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] text-green-400 font-bold uppercase block">Final Payable Quote ({appliedCoupon.code})</span>
-                      <span className="font-['Creato_Display'] text-2xl font-extrabold text-green-400">
-                        ${finalPayableTotal} USD {billingType === 'monthly' ? '/mo' : ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-slate-300 text-xs">
-                    ✍️ Additional Project Notes / Instructions (Optional):
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Need dynamic subtitles, fast pacing, or specific brand colors..."
-                    value={additionalNotes}
-                    onChange={(e) => setAdditionalNotes(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-slate-300 text-xs">
-                    📧 Your Contact Information (Required):
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Your Email Address or Direct WhatsApp Number..."
-                    value={contactInfo}
-                    onChange={(e) => setContactInfo(e.target.value)}
-                    className="w-full bg-slate-900 border border-cyan-500/30 rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 font-semibold"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    className="px-4 py-2 rounded-xl text-slate-400 hover:text-white flex items-center gap-1.5"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="neon-button-primary py-3 px-6 text-xs justify-center shadow-[0_0_20px_rgba(0,243,255,0.4)]"
-                  >
-                    <span>{isSubmitting ? 'Generating Invoice...' : `🚀 Submit Brief & Claim ${discountPercent}% Offer`}</span>
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </form>
-            )}
+              <button
+                onClick={handleDownloadInvoicePdf}
+                className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4 text-cyan-400" />
+                <span>Download Brief PDF</span>
+              </button>
+            </div>
 
           </div>
         )}

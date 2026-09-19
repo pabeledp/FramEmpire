@@ -2,9 +2,9 @@
 
 export const AGENCY_INFO = {
   name: "FramEmpire",
-  subtitle: "3D Animation, Motion & Digital Creative Studio",
-  tagline: "A Revolution of Animation",
-  fullTagline: "A Revolution of Animation — We craft ultra-futuristic 3D motion graphics, frame-by-frame character animation, video post-production & web builds.",
+  subtitle: "Motion, Video Editing & Digital Creative Studio",
+  tagline: "A Revolution of Digital Engineering",
+  fullTagline: "A Revolution of Digital Engineering — We craft high-voltage graphic design, video post-production & bespoke web builds.",
   established: 2022,
   completedProjects: 312,
   clientSatisfaction: "99.6%",
@@ -17,23 +17,12 @@ export const AGENCY_INFO = {
 
 export const SERVICES = [
   {
-    id: "motion-graphics",
-    title: "3D Motion Graphics & Animation",
-    category: "Animation",
-    icon: "Sparkles",
-    gradient: "from-cyan-500 to-blue-600",
-    description: "Cinematic 3D kinetic typography, product reveals, Octane/Redshift 3D renders, and frame-by-frame character animation.",
-    deliverables: ["3D Kinetic Teasers", "Character Animation", "Octane Render Assets", "Lottie Web Animations"],
-    popularFor: "Product Launches, Web3 & Commercials",
-    leadTime: "2-3 Weeks",
-  },
-  {
     id: "graphic-design",
     title: "Graphic Design & Brand Identity",
     category: "Design",
     icon: "Palette",
     gradient: "from-blue-500 to-indigo-600",
-    description: "High-voltage visual identities, 3D brand guidelines, futuristic UI kits, and vector art assets created for disruptor brands.",
+    description: "High-voltage visual identities, brand guidelines, futuristic UI kits, and vector art assets created for disruptor brands.",
     deliverables: ["Brand Strategy & Guidelines", "3D Logo Systems", "Design System UI Kits", "Marketing & Social Assets"],
     popularFor: "Startups, Tech Brands & Fintech",
     leadTime: "1-2 Weeks",
@@ -56,7 +45,7 @@ export const SERVICES = [
     icon: "Code2",
     gradient: "from-cyan-400 to-purple-600",
     description: "Bespoke Three.js / WebGL experiences, React applications, fluid CSS animations, and ultra-responsive landing pages.",
-    deliverables: ["Fullstack React/Vite Apps", "Interactive 3D WebGL", "Headless CMS Integration", "SEO & Performance Tuning"],
+    deliverables: ["Fullstack React/Vite Apps", "Interactive Web Renders", "Headless CMS Integration", "SEO & Performance Tuning"],
     popularFor: "Enterprise & Modern Web Apps",
     leadTime: "3-4 Weeks",
   }

@@ -48,7 +48,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState(getInitialViewMode); // 'public' | 'admin' | 'tictactoe' | 'privacy-policy'
   const [userRole, setUserRole] = useState('Admin / Executive');
   const [estimatorOpen, setEstimatorOpen] = useState(false);
-  const [estimatorService, setEstimatorService] = useState('motion-graphics');
+  const [estimatorService, setEstimatorService] = useState('graphic-design');
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   // Dynamic Portfolio Projects State (Supports YouTube, Vimeo, Behance embeds added via Admin Panel)

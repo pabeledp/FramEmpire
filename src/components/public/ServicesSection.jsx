@@ -27,8 +27,8 @@ export default function ServicesSection({ onSelectService, onOpenEstimator }) {
           </p>
         </div>
 
-        {/* 4 Responsive Service Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* 3 Responsive Service Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
           {SERVICES.map((service) => {
             const IconComponent = ICON_MAP[service.icon] || Sparkles;
             const isSelected = activeId === service.id;
@@ -37,9 +37,9 @@ export default function ServicesSection({ onSelectService, onOpenEstimator }) {
               <div
                 key={service.id}
                 onClick={() => setActiveId(service.id)}
-                className={`neon-card p-5 sm:p-6 flex flex-col justify-between cursor-pointer group transition-all duration-300 ${
+                className={`neon-card p-6 sm:p-7 flex flex-col justify-between cursor-pointer group transition-all duration-300 ${
                   isSelected
-                    ? 'border-cyan-400/80 bg-slate-900/90 shadow-[0_0_20px_rgba(0,243,255,0.15)]'
+                    ? 'border-cyan-400/80 bg-slate-900/90 shadow-[0_0_25px_rgba(0,243,255,0.2)]'
                     : 'border-cyan-500/20 hover:border-cyan-500/40'
                 }`}
               >
@@ -55,7 +55,7 @@ export default function ServicesSection({ onSelectService, onOpenEstimator }) {
                   </div>
 
                   {/* Title & Description */}
-                  <h3 className="font-['Creato_Display'] text-base sm:text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
+                  <h3 className="font-['Creato_Display'] text-lg sm:text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
                     {service.title}
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -88,9 +88,9 @@ export default function ServicesSection({ onSelectService, onOpenEstimator }) {
                       e.stopPropagation();
                       onOpenEstimator(service.id);
                     }}
-                    className="flex items-center gap-1 text-cyan-300 font-bold hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 text-cyan-300 font-extrabold hover:text-white transition-colors bg-cyan-950/80 px-3 py-1.5 rounded-lg border border-cyan-500/30 hover:border-cyan-400"
                   >
-                    <span>Estimate</span>
+                    <span>Get Started</span>
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
                 </div>
