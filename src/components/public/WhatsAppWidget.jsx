@@ -39,6 +39,19 @@ export default function WhatsAppWidget() {
     }
   ]);
 
+  const [sessionId] = useState(() => {
+    try {
+      let saved = localStorage.getItem('fe_chat_session_id');
+      if (!saved) {
+        saved = 'ID-' + Math.floor(1000 + Math.random() * 9000);
+        localStorage.setItem('fe_chat_session_id', saved);
+      }
+      return saved;
+    } catch (e) {
+      return 'ID-' + Math.floor(1000 + Math.random() * 9000);
+    }
+  });
+
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -62,7 +75,7 @@ export default function WhatsAppWidget() {
           const res = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'check_reply' })
+            body: JSON.stringify({ action: 'check_reply', session_id: sessionId })
           });
           const data = await res.json();
           if (data && data.hasReply && data.reply) {
@@ -134,6 +147,7 @@ export default function WhatsAppWidget() {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
+          session_id: sessionId,
           name: 'Website Visitor',
           contact: 'Live Chat Widget',
           project: trimmedText
