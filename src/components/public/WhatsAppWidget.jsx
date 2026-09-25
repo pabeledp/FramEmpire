@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Sparkles, CheckCheck, ExternalLink, HelpCircle, Clock } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, CheckCheck, ExternalLink, Clock } from 'lucide-react';
 import knowledge from '../../data/knowledge.json';
 
 const KNOWLEDGE_BASE = {
@@ -23,13 +23,6 @@ function checkIsWithinWorkingHours() {
     return localHour >= 10 && localHour < 22;
   }
 }
-
-const QUICK_CHIPS = [
-  { id: 'services', label: '🚀 Services & Rates', prompt: 'What services do you offer and what are your rates?' },
-  { id: 'hours', label: '🕒 Working Hours', prompt: 'What are your operational working hours?' },
-  { id: 'human', label: '📞 Executive Support', prompt: 'I want to speak with executive support / Nabila.' },
-  { id: 'estimator', label: '📄 Project Estimator', prompt: 'How can I get an instant price estimate or invoice?' }
-];
 
 export default function WhatsAppWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,7 +56,7 @@ export default function WhatsAppWidget() {
     setUnreadBadge(false);
   };
 
-  // Real-time API Fetch from /api/chat endpoint powered by Gemini 1.5 Flash
+  // Real-time API Fetch from Google Apps Script Web App Endpoint
   const processMessageSubmission = async (userText) => {
     if (!userText.trim()) return;
 
@@ -157,7 +150,7 @@ export default function WhatsAppWidget() {
     const agentReplyObj = {
       id: Date.now() + 1,
       sender: 'agent',
-      senderType: responseSender || 'Gemini AI',
+      senderType: responseSender || 'AI Support',
       text: aiResponseText,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
@@ -168,10 +161,6 @@ export default function WhatsAppWidget() {
   const handleFormSubmit = (e) => {
     e.preventDefault();
     processMessageSubmission(message);
-  };
-
-  const handleChipClick = (chip) => {
-    processMessageSubmission(chip.prompt);
   };
 
   const openExecutiveWhatsApp = () => {
@@ -202,7 +191,7 @@ export default function WhatsAppWidget() {
                   <span>Nabila</span>
                   <CheckCheck className="w-4 h-4 text-cyan-400" />
                 </h4>
-                <p className="text-[11px] text-cyan-300/90 font-medium">Executive Director • Gemini 1.5 Flash</p>
+                <p className="text-[11px] text-cyan-300/90 font-medium">Executive Director • Client Support</p>
               </div>
             </div>
 
@@ -278,30 +267,6 @@ export default function WhatsAppWidget() {
             )}
 
             <div ref={messagesEndRef} />
-          </div>
-
-          {/* Quick Question Chips */}
-          <div className="p-2.5 bg-[#080b17] border-t border-slate-800 space-y-1.5">
-            <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-              <span className="flex items-center gap-1">
-                <HelpCircle className="w-3 h-3 text-cyan-400" />
-                <span>Quick Assistance:</span>
-              </span>
-              <span className="text-[9px] text-cyan-400">Click to ask Gemini</span>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5 max-h-[75px] overflow-y-auto no-scrollbar">
-              {QUICK_CHIPS.map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => handleChipClick(chip)}
-                  className="bg-slate-900 hover:bg-cyan-950 hover:border-cyan-400 text-slate-200 hover:text-cyan-300 text-[11px] py-1 px-2.5 rounded-full border border-slate-800 transition-all font-medium text-left"
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* In-Web Message Input Form */}
