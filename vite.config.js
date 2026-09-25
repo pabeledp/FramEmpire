@@ -56,10 +56,32 @@ function apiChatPlugin() {
         req.on('data', chunk => { body += chunk.toString(); });
         req.on('end', async () => {
           try {
-            const { message, history } = JSON.parse(body || '{}');
-            if (!message) {
+            const parsedBody = JSON.parse(body || '{}');
+            const userMsg = parsedBody.project || parsedBody.user_message || parsedBody.message;
+            if (!userMsg) {
               res.statusCode = 400;
               return res.end(JSON.stringify({ error: 'Message required' }));
+            }
+
+            const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwp0iTjxYeJMktukdeqWkzZuMxolf-91_hGGZ0Cml-d5RoXLDoWReEChTsbpSBfwHZD/exec';
+            try {
+              const gasRes = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                  name: parsedBody.name || 'Website Visitor',
+                  contact: parsedBody.contact || 'Live Chat Widget',
+                  project: userMsg
+                })
+              });
+              const gasData = await gasRes.json();
+              if (gasData && gasData.reply) {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(JSON.stringify({ reply: gasData.reply, text: gasData.reply, sender: gasData.sender || 'Gemini AI' }));
+              }
+            } catch (gasErr) {
+              console.warn('Vite middleware Apps Script error, falling back to direct Gemini SDK:', gasErr);
             }
 
             const genAI = new GoogleGenerativeAI(API_KEY);
@@ -68,7 +90,7 @@ function apiChatPlugin() {
               systemInstruction: SYSTEM_INSTRUCTION
             });
 
-            const formattedHistory = (history || [])
+            const formattedHistory = (parsedBody.history || [])
               .filter(msg => msg.id !== 1 && msg.text)
               .map(msg => ({
                 role: msg.sender === 'user' ? 'user' : 'model',
@@ -76,12 +98,12 @@ function apiChatPlugin() {
               }));
 
             const chat = model.startChat({ history: formattedHistory });
-            const result = await chat.sendMessage(message);
+            const result = await chat.sendMessage(userMsg);
             const responseText = result.response.text();
 
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            return res.end(JSON.stringify({ text: responseText }));
+            return res.end(JSON.stringify({ reply: responseText, text: responseText, sender: 'Gemini AI' }));
           } catch (err) {
             console.error('Vite /api/chat error:', err);
             res.statusCode = 500;

@@ -96,24 +96,50 @@ export default function WhatsAppWidget() {
       }).catch(() => {});
     } catch (err) {}
 
-    // 3. Real-Time Fetch from /api/chat Backend Endpoint
+    // 3. Real-Time Fetch from Google Apps Script Web App Backend Endpoint
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwp0iTjxYeJMktukdeqWkzZuMxolf-91_hGGZ0Cml-d5RoXLDoWReEChTsbpSBfwHZD/exec';
     let aiResponseText = '';
+    let responseSender = '';
+
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          message: trimmedText,
-          history: chatHistory
+          name: 'Website Visitor',
+          contact: 'Live Chat Widget',
+          project: trimmedText
         })
       });
 
       const data = await response.json();
-      if (data && data.text) {
-        aiResponseText = data.text;
+      if (data) {
+        if (data.reply) aiResponseText = data.reply;
+        if (data.sender) responseSender = data.sender;
       }
-    } catch (err) {
-      console.warn('Fetch /api/chat error:', err);
+    } catch (gasErr) {
+      console.warn('Fetch Apps Script error, trying /api/chat fallback:', gasErr);
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Website Visitor',
+            contact: 'Live Chat Widget',
+            project: trimmedText,
+            message: trimmedText,
+            history: chatHistory
+          })
+        });
+
+        const data = await response.json();
+        if (data && (data.reply || data.text)) {
+          aiResponseText = data.reply || data.text;
+          if (data.sender) responseSender = data.sender;
+        }
+      } catch (err) {
+        console.warn('Fetch /api/chat error:', err);
+      }
     }
 
     // Fallback message if endpoint network error occurs
@@ -131,6 +157,7 @@ export default function WhatsAppWidget() {
     const agentReplyObj = {
       id: Date.now() + 1,
       sender: 'agent',
+      senderType: responseSender || 'Gemini AI',
       text: aiResponseText,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };

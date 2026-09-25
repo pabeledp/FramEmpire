@@ -44,10 +44,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message, history } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const parsedBody = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const userMsg = parsedBody.project || parsedBody.user_message || parsedBody.message;
 
-    if (!message) {
+    if (!userMsg) {
       return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Try Google Apps Script Web App Backend first
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwp0iTjxYeJMktukdeqWkzZuMxolf-91_hGGZ0Cml-d5RoXLDoWReEChTsbpSBfwHZD/exec';
+    try {
+      const gasRes = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          name: parsedBody.name || 'Website Visitor',
+          contact: parsedBody.contact || 'Live Chat Widget',
+          project: userMsg
+        })
+      });
+      const gasData = await gasRes.json();
+      if (gasData && gasData.reply) {
+        return res.status(200).json({ reply: gasData.reply, text: gasData.reply, sender: gasData.sender || 'Gemini AI' });
+      }
+    } catch (gasError) {
+      console.warn('Apps Script dispatch failed in /api/chat, falling back to direct Gemini SDK:', gasError);
     }
 
     const genAI = new GoogleGenerativeAI(API_KEY);
@@ -56,7 +77,7 @@ export default async function handler(req, res) {
       systemInstruction: SYSTEM_INSTRUCTION
     });
 
-    const formattedHistory = (history || [])
+    const formattedHistory = (parsedBody.history || [])
       .filter(msg => msg.id !== 1 && msg.text)
       .map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'model',
@@ -64,10 +85,10 @@ export default async function handler(req, res) {
       }));
 
     const chat = model.startChat({ history: formattedHistory });
-    const result = await chat.sendMessage(message);
+    const result = await chat.sendMessage(userMsg);
     const text = result.response.text();
 
-    return res.status(200).json({ text });
+    return res.status(200).json({ reply: text, text, sender: 'Gemini AI' });
   } catch (error) {
     console.error('API /api/chat error:', error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });
