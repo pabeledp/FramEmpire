@@ -51,6 +51,41 @@ export default function WhatsAppWidget() {
     }
   }, [chatHistory, isOpen, isTyping]);
 
+  // Real-time polling for Human Support replies from Telegram
+  useEffect(() => {
+    let intervalId = null;
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwp0iTjxYeJMktukdeqWkzZuMxolf-91_hGGZ0Cml-d5RoXLDoWReEChTsbpSBfwHZD/exec';
+
+    if (isOpen) {
+      intervalId = setInterval(async () => {
+        try {
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'check_reply' })
+          });
+          const data = await res.json();
+          if (data && data.hasReply && data.reply) {
+            setChatHistory(prev => [
+              ...prev,
+              {
+                id: Date.now(),
+                sender: 'agent',
+                senderType: data.sender || 'Human Support',
+                text: data.reply,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              }
+            ]);
+          }
+        } catch (err) {}
+      }, 4000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isOpen]);
+
   const handleOpen = () => {
     setIsOpen(!isOpen);
     setUnreadBadge(false);
