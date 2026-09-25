@@ -39,6 +39,18 @@ export default function WhatsAppWidget() {
     }
   ]);
 
+  const [userName, setUserName] = useState(() => {
+    try {
+      return localStorage.getItem('fe_chat_user_name') || '';
+    } catch (e) { return ''; }
+  });
+
+  const [userContact, setUserContact] = useState(() => {
+    try {
+      return localStorage.getItem('fe_chat_user_contact') || '';
+    } catch (e) { return ''; }
+  });
+
   const [sessionId] = useState(() => {
     try {
       let saved = localStorage.getItem('fe_chat_session_id');
@@ -110,6 +122,14 @@ export default function WhatsAppWidget() {
 
     const trimmedText = userText.trim();
 
+    // Check if user text looks like a name (1-2 words, no punctuation/common words)
+    let currentLocalName = userName;
+    if (!currentLocalName && trimmedText.split(' ').length <= 2 && trimmedText.length <= 25 && !/hi|hello|hey|price|cost|rate|how|what|need|want|help|edit|design/i.test(trimmedText)) {
+      currentLocalName = trimmedText.trim();
+      setUserName(currentLocalName);
+      try { localStorage.setItem('fe_chat_user_name', currentLocalName); } catch(e){}
+    }
+
     // 1. Render User Message Bubble
     const userMsgObj = {
       id: Date.now(),
@@ -132,7 +152,7 @@ export default function WhatsAppWidget() {
           subject: '⚡ Live Chat Inquiry - FramEmpire',
           from_name: 'Nabila Live Chat',
           to_email: 'team.framempire@gmail.com',
-          message: `Client Message:\n"${trimmedText}"\n\nContact: Nabila (+880 1848-374242)`
+          message: `Client Message:\n"${trimmedText}"\nUser Name: ${currentLocalName || 'Website Visitor'}`
         })
       }).catch(() => {});
     } catch (err) {}
@@ -148,8 +168,8 @@ export default function WhatsAppWidget() {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           session_id: sessionId,
-          name: 'Website Visitor',
-          contact: 'Live Chat Widget',
+          name: currentLocalName || 'Website Visitor',
+          contact: userContact || 'Not Specified',
           project: trimmedText
         })
       });
@@ -158,6 +178,14 @@ export default function WhatsAppWidget() {
       if (data) {
         if (data.reply) aiResponseText = data.reply;
         if (data.sender) responseSender = data.sender;
+        if (data.userName && data.userName !== 'Website Visitor') {
+          setUserName(data.userName);
+          try { localStorage.setItem('fe_chat_user_name', data.userName); } catch(e){}
+        }
+        if (data.userContact && data.userContact !== 'Not Specified') {
+          setUserContact(data.userContact);
+          try { localStorage.setItem('fe_chat_user_contact', data.userContact); } catch(e){}
+        }
       }
     } catch (gasErr) {
       console.warn('Fetch Apps Script error, trying /api/chat fallback:', gasErr);
