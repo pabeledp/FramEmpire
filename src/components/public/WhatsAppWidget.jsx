@@ -51,7 +51,7 @@ export default function WhatsAppWidget() {
     }
   }, [chatHistory, isOpen, isTyping]);
 
-  // Real-time polling for Human Support replies from Telegram
+  // Real-time background polling for Telegram Human Support replies (Z2 cell sync)
   useEffect(() => {
     let intervalId = null;
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwp0iTjxYeJMktukdeqWkzZuMxolf-91_hGGZ0Cml-d5RoXLDoWReEChTsbpSBfwHZD/exec';
@@ -71,14 +71,14 @@ export default function WhatsAppWidget() {
               {
                 id: Date.now(),
                 sender: 'agent',
-                senderType: data.sender || 'Human Support',
+                senderType: 'Support Agent',
                 text: data.reply,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               }
             ]);
           }
         } catch (err) {}
-      }, 4000);
+      }, 2500);
     }
 
     return () => {
