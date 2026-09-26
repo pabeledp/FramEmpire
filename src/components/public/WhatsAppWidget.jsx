@@ -51,6 +51,12 @@ export default function WhatsAppWidget() {
     } catch (e) { return ''; }
   });
 
+  const [threadId, setThreadId] = useState(() => {
+    try {
+      return localStorage.getItem('fe_chat_thread_id') || '';
+    } catch (e) { return ''; }
+  });
+
   const [sessionId] = useState(() => {
     try {
       let saved = localStorage.getItem('fe_chat_session_id');
@@ -76,7 +82,7 @@ export default function WhatsAppWidget() {
     }
   }, [chatHistory, isOpen, isTyping]);
 
-  // Real-time background polling for Telegram Human Support replies (Z2 cell sync)
+  // Real-time background polling for Telegram Topic Human Support replies
   useEffect(() => {
     let intervalId = null;
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwp0iTjxYeJMktukdeqWkzZuMxolf-91_hGGZ0Cml-d5RoXLDoWReEChTsbpSBfwHZD/exec';
@@ -87,7 +93,7 @@ export default function WhatsAppWidget() {
           const res = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'check_reply', session_id: sessionId })
+            body: JSON.stringify({ action: 'check_reply', session_id: sessionId, thread_id: threadId })
           });
           const data = await res.json();
           if (data && data.hasReply && data.reply) {
@@ -109,7 +115,7 @@ export default function WhatsAppWidget() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isOpen]);
+  }, [isOpen, threadId]);
 
   const handleOpen = () => {
     setIsOpen(!isOpen);
@@ -168,6 +174,7 @@ export default function WhatsAppWidget() {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           session_id: sessionId,
+          thread_id: threadId,
           name: currentLocalName || 'Website Visitor',
           contact: userContact || 'Not Specified',
           project: trimmedText
@@ -178,6 +185,10 @@ export default function WhatsAppWidget() {
       if (data) {
         if (data.reply) aiResponseText = data.reply;
         if (data.sender) responseSender = data.sender;
+        if (data.thread_id && String(data.thread_id) !== String(threadId)) {
+          setThreadId(String(data.thread_id));
+          try { localStorage.setItem('fe_chat_thread_id', String(data.thread_id)); } catch(e){}
+        }
         if (data.userName && data.userName !== 'Website Visitor') {
           setUserName(data.userName);
           try { localStorage.setItem('fe_chat_user_name', data.userName); } catch(e){}
