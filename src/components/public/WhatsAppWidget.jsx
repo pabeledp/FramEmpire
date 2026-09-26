@@ -177,7 +177,8 @@ export default function WhatsAppWidget() {
           thread_id: threadId,
           name: currentLocalName || 'Website Visitor',
           contact: userContact || 'Not Specified',
-          project: trimmedText
+          project: trimmedText,
+          user_message: trimmedText
         })
       });
 
