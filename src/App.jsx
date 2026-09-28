@@ -54,6 +54,15 @@ export default function App() {
   // Dynamic Portfolio Projects State (Supports YouTube, Vimeo, Behance embeds added via Admin Panel)
   const [projectsList, setProjectsList] = useState(PORTFOLIO_PROJECTS);
 
+  // Force Purge Stale Light Mode & Ensure Dark Theme System Only
+  useEffect(() => {
+    document.documentElement.classList.remove('light-mode');
+    document.body.classList.remove('light-mode');
+    try {
+      localStorage.removeItem('theme');
+    } catch (e) {}
+  }, []);
+
   // URL Path & Hash Listener for /admin, /feat, /tictactoe and /privacy-policy routes
   useEffect(() => {
     const checkRoute = () => {
