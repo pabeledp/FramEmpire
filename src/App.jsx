@@ -54,14 +54,28 @@ export default function App() {
   // Dynamic Portfolio Projects State (Supports YouTube, Vimeo, Behance embeds added via Admin Panel)
   const [projectsList, setProjectsList] = useState(PORTFOLIO_PROJECTS);
 
-  // Force Purge Stale Light Mode & Ensure Dark Theme System Only
+  // Sky Blue Spectrum Light Theme State Management
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('theme') === 'light') return 'light';
+      return localStorage.getItem('framempire_theme') || 'dark';
+    }
+    return 'dark';
+  });
+
   useEffect(() => {
-    document.documentElement.classList.remove('light-mode');
-    document.body.classList.remove('light-mode');
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-mode');
+      document.body.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+      document.body.classList.remove('light-mode');
+    }
     try {
-      localStorage.removeItem('theme');
+      localStorage.setItem('framempire_theme', theme);
     } catch (e) {}
-  }, []);
+  }, [theme]);
 
   // URL Path & Hash Listener for /admin, /feat, /tictactoe and /privacy-policy routes
   useEffect(() => {
@@ -153,6 +167,8 @@ export default function App() {
           }}
           userRole={userRole}
           setUserRole={setUserRole}
+          theme={theme}
+          onToggleTheme={(newTheme) => setTheme(newTheme)}
           onOpenEstimator={() => setEstimatorOpen(true)}
           onOpenGamePage={() => {
             setViewMode('tictactoe');

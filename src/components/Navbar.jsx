@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, ShieldCheck, LogOut, Lock, Menu, X, ArrowRight, Calculator, Gamepad2, Cpu, Smartphone, Layers } from 'lucide-react';
+import { Sparkles, ShieldCheck, LogOut, Lock, Menu, X, ArrowRight, Calculator, Gamepad2, Cpu, Smartphone, Layers, Sun, Moon } from 'lucide-react';
 import { AGENCY_INFO } from '../data/creativeData';
 
 export default function Navbar({ 
@@ -8,7 +8,9 @@ export default function Navbar({
   userRole, 
   setUserRole, 
   onOpenEstimator,
-  onOpenGamePage
+  onOpenGamePage,
+  theme,
+  onToggleTheme
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -63,18 +65,30 @@ export default function Navbar({
 
           {/* Desktop Navigation Links */}
           {viewMode === 'public' ? (
-            <div className="flex items-center gap-4 lg:gap-6">
+            <div className="flex items-center gap-3 lg:gap-5">
               <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-300">
                 <a href="#services" className="hover:text-cyan-400 transition-colors">Services</a>
                 <a href="#portfolio" className="hover:text-cyan-400 transition-colors">Portfolio</a>
                 <a href="#about" className="hover:text-cyan-400 transition-colors">About Us</a>
               </nav>
 
-              <div className="hidden sm:flex items-center gap-2.5 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                {/* Sun / Moon Light Mode Toggle Button */}
+                {onToggleTheme && (
+                  <button
+                    onClick={() => onToggleTheme(theme === 'dark' ? 'light' : 'dark')}
+                    className="p-2 sm:p-2.5 rounded-full bg-cyan-950/40 border border-cyan-500/40 text-cyan-300 hover:text-white transition-all cursor-pointer hover:scale-110 shadow-sm"
+                    title={theme === 'dark' ? 'Switch to Sky Blue Light Mode' : 'Switch to Dark Mode'}
+                    aria-label="Toggle Theme"
+                  >
+                    {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400 animate-pulse" /> : <Moon className="w-4 h-4 text-sky-600" />}
+                  </button>
+                )}
+
                 {/* FE Apps Developer Hub Button */}
                 <button
                   onClick={onOpenGamePage}
-                  className="bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 text-cyan-300 hover:text-white border border-cyan-500/40 hover:border-cyan-400 py-1.5 sm:py-2 px-4 text-xs font-bold rounded-full shadow-[0_0_15px_rgba(0,243,255,0.2)] hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                  className="hidden sm:flex bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 text-cyan-300 hover:text-white border border-cyan-500/40 hover:border-cyan-400 py-1.5 sm:py-2 px-3.5 sm:px-4 text-xs font-bold rounded-full shadow-[0_0_15px_rgba(0,243,255,0.2)] hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] transition-all items-center gap-1.5 cursor-pointer hover:scale-105"
                 >
                   <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
                   <span>🚀 FE Apps</span>
@@ -84,7 +98,7 @@ export default function Navbar({
                 {/* Project Estimator Button */}
                 <button
                   onClick={onOpenEstimator}
-                  className="neon-button-secondary py-2 px-4 text-xs rounded-full shadow-[0_0_15px_rgba(0,243,255,0.25)]"
+                  className="hidden sm:flex neon-button-secondary py-2 px-4 text-xs rounded-full shadow-[0_0_15px_rgba(0,243,255,0.25)]"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Project Estimator</span>

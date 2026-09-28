@@ -25,6 +25,35 @@
   --glow-button: 0 0 12px rgba(0, 243, 255, 0.25);
 }
 
+/* Light Theme Sky Blue Spectrum Tokens */
+html.light-mode {
+  --bg-page: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-card-glass: rgba(255, 255, 255, 0.88);
+  --bg-well: #F0F7FF;
+
+  --sky-50: #F0F9FF;
+  --sky-100: #E0F2FE;
+  --sky-200: #BAE6FD;
+  --sky-400: #38BDF8;
+  --sky-600: #0284C7;
+  --sky-800: #075985;
+
+  --text-primary: #0C1E38;
+  --text-secondary: #334E68;
+  --text-muted: #627D98;
+
+  --text-hero-gradient: linear-gradient(135deg, #0C1E38 15%, #0284C7 65%, #38BDF8 100%);
+  --sky-btn-gradient: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%);
+  --sky-btn-gradient-hover: linear-gradient(135deg, #0EA5E9 0%, #0369A1 100%);
+  --sky-banner-gradient: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+
+  --border-card: rgba(186, 230, 253, 0.7);
+  --border-card-hover: #38BDF8;
+  --shadow-card-rest: 0 4px 20px -2px rgba(12, 30, 56, 0.04);
+  --shadow-card-hover: 0 18px 32px -4px rgba(2, 132, 199, 0.14);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -205,6 +234,358 @@ h1, h2, h3, h4, h5, h6, .font-heading, [class*="font-['Creato_Display']"] {
 .animate-fadeIn {
   animation: smoothFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* =========================================================================
+   ☀️ FramEmpire Light Theme Implementation Plan: Sky Blue Spectrum
+   ========================================================================= */
+
+html.light-mode,
+body.light-mode {
+  background-color: #F8FAFC !important;
+  background: #F8FAFC !important;
+  color: #0C1E38 !important;
+}
+
+/* 1. Logo Automatic Swap */
+html.light-mode header img[src*="framempire_logo_white"] {
+  content: url("/framempire_logo_black.png") !important;
+}
+
+/* 2. Global Canvas & Section Overrides */
+html.light-mode main,
+html.light-mode section,
+html.light-mode div[id] {
+  background-color: #F8FAFC !important;
+  background: #F8FAFC !important;
+}
+
+/* Eliminate All Dark Utility Background Classes */
+html.light-mode .bg-\[\#04060d\],
+html.light-mode .bg-\[\#070a14\],
+html.light-mode .bg-\[\#060812\],
+html.light-mode .bg-\[\#070913\],
+html.light-mode .bg-\[\#0b0e21\],
+html.light-mode .bg-\[\#050814\],
+html.light-mode .bg-\[\#080b17\],
+html.light-mode .bg-\[\#070914\],
+html.light-mode .bg-\[\#0a0d1d\],
+html.light-mode .bg-\[\#0b0e1e\],
+html.light-mode .bg-\[\#03050e\],
+html.light-mode .bg-\[\#020309\],
+html.light-mode .bg-\[\#090d1a\],
+html.light-mode .bg-\[\#050711\],
+html.light-mode .bg-\[\#060814\],
+html.light-mode .bg-\[\#080c1d\],
+html.light-mode .bg-\[\#030409\],
+html.light-mode .bg-\[\#0b101f\],
+html.light-mode .bg-\[\#020307\],
+html.light-mode .bg-\[\#0c1224\],
+html.light-mode .bg-slate-950,
+html.light-mode .bg-slate-900,
+html.light-mode .bg-slate-950\/85,
+html.light-mode .bg-slate-950\/95,
+html.light-mode .bg-slate-900\/80,
+html.light-mode .bg-slate-900\/90,
+html.light-mode .bg-slate-900\/60,
+html.light-mode .bg-slate-950\/90,
+html.light-mode .bg-slate-900\/95,
+html.light-mode .bg-\[\#090c19\]\/90,
+html.light-mode .bg-\[\#0b0e1e\]\/95 {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* 3. Grid, Meshes & Ambient Glows */
+html.light-mode .bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(14, 165, 233, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.07) 1px, transparent 1px) !important;
+  background-size: 48px 48px !important;
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 35%, transparent 85%) !important;
+  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 35%, transparent 85%) !important;
+}
+
+html.light-mode .glow-orb-cyan {
+  background: radial-gradient(circle 650px at 50% 12%, rgba(56, 189, 248, 0.16), transparent 70%) !important;
+  filter: blur(50px) !important;
+}
+
+html.light-mode .glow-orb-blue {
+  background: radial-gradient(circle 500px at 85% 45%, rgba(186, 230, 253, 0.22), transparent 65%) !important;
+  filter: blur(50px) !important;
+}
+
+/* 4. Navigation Bar */
+html.light-mode header > div {
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(186, 230, 253, 0.6) !important;
+  border-color: rgba(186, 230, 253, 0.6) !important;
+  box-shadow: 0 4px 20px -2px rgba(12, 30, 56, 0.04) !important;
+}
+
+html.light-mode header nav a {
+  color: #334E68 !important;
+}
+
+html.light-mode header nav a:hover {
+  color: #0284C7 !important;
+}
+
+/* Header CTA Buttons */
+html.light-mode header button.neon-button-secondary,
+html.light-mode header button[class*="from-cyan-"] {
+  background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28) !important;
+  border: none !important;
+}
+
+/* 5. Typography & Sky Gradient Rules */
+html.light-mode .text-gradient {
+  background: linear-gradient(135deg, #0C1E38 15%, #0284C7 65%, #38BDF8 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+html.light-mode .neon-badge,
+html.light-mode span[class*="bg-cyan-950"],
+html.light-mode div[class*="from-cyan-950"] span {
+  background: #F0F9FF !important;
+  border: 1px solid #BAE6FD !important;
+  color: #0284C7 !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+html.light-mode h1, 
+html.light-mode h2, 
+html.light-mode h3, 
+html.light-mode h4, 
+html.light-mode h5, 
+html.light-mode h6,
+html.light-mode .text-white,
+html.light-mode .text-slate-100,
+html.light-mode .text-slate-200 {
+  color: #0C1E38 !important;
+}
+
+html.light-mode p,
+html.light-mode span:not([class*="bg-"]):not([class*="text-cyan"]):not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-white"]),
+html.light-mode .text-slate-300,
+html.light-mode .text-slate-400 {
+  color: #334E68 !important;
+}
+
+html.light-mode .text-slate-500 {
+  color: #627D98 !important;
+}
+
+html.light-mode .text-cyan-400,
+html.light-mode .text-cyan-300,
+html.light-mode .text-blue-400,
+html.light-mode .text-blue-300 {
+  color: #0284C7 !important;
+}
+
+/* 6. Primary & Secondary Buttons */
+html.light-mode .neon-button-primary,
+html.light-mode button[class*="from-cyan-"],
+html.light-mode button[class*="from-blue-"],
+html.light-mode a[class*="from-cyan-"],
+html.light-mode a[class*="from-blue-"] {
+  background: linear-gradient(135deg, #38BDF8 0%, #0284C7 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35) !important;
+  border-radius: 9999px !important;
+}
+
+html.light-mode .neon-button-primary:hover,
+html.light-mode button[class*="from-cyan-"]:hover,
+html.light-mode button[class*="from-blue-"]:hover,
+html.light-mode a[class*="from-cyan-"]:hover,
+html.light-mode a[class*="from-blue-"]:hover {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%) !important;
+  box-shadow: 0 6px 22px rgba(2, 132, 199, 0.42) !important;
+}
+
+html.light-mode .neon-button-primary *,
+html.light-mode button[class*="from-cyan-"] *,
+html.light-mode button[class*="from-blue-"] *,
+html.light-mode a[class*="from-cyan-"] *,
+html.light-mode a[class*="from-blue-"] * {
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
+}
+
+html.light-mode .neon-button-secondary {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #0284C7 !important;
+  border: 1px solid #BAE6FD !important;
+  border-radius: 9999px !important;
+}
+
+html.light-mode .neon-button-secondary:hover {
+  background: #F0F9FF !important;
+  border-color: #38BDF8 !important;
+}
+
+/* 7. Bento Grids, Service & Showcase Cards */
+html.light-mode .neon-card,
+html.light-mode div[class*="rounded-3xl"],
+html.light-mode div[class*="rounded-2xl"],
+html.light-mode .glass-card {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  border: 1px solid rgba(186, 230, 253, 0.7) !important;
+  box-shadow: 0 4px 20px -2px rgba(12, 30, 56, 0.04) !important;
+}
+
+html.light-mode .neon-card:hover {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  border: 1px solid #38BDF8 !important;
+  box-shadow: 0 18px 32px -4px rgba(2, 132, 199, 0.12), 0 4px 12px -2px rgba(2, 132, 199, 0.06) !important;
+  transform: translateY(-3px) !important;
+}
+
+html.light-mode .neon-card:hover h2,
+html.light-mode .neon-card:hover h3 {
+  color: #0284C7 !important;
+  transition: color 200ms ease;
+}
+
+/* Thumbnail Inset Frames (Video & Portfolio Wells) */
+html.light-mode #game-feature div[class*="bg-slate-900"],
+html.light-mode #game-feature div[class*="bg-slate-950"],
+html.light-mode div[class*="bg-[#060812]"] {
+  background-color: #F0F7FF !important;
+  background: #F0F7FF !important;
+  border: 1px solid rgba(186, 230, 253, 0.5) !important;
+}
+
+/* 8. Highlight Banner (Quote & Announcement) */
+html.light-mode div[class*="from-cyan-950"],
+html.light-mode div[class*="from-purple-950"],
+html.light-mode div[class*="from-slate-950"] {
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%) !important;
+  border: 1px solid #7DD3FC !important;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 10px 30px rgba(56, 189, 248, 0.12) !important;
+}
+
+html.light-mode div[class*="from-cyan-950"] p,
+html.light-mode div[class*="from-purple-950"] p {
+  color: #0C1E38 !important;
+}
+
+html.light-mode div[class*="from-cyan-950"] .text-gradient {
+  background: linear-gradient(135deg, #0284C7 0%, #0EA5E9 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* 9. Team & Profile Cards */
+html.light-mode #captain div[class*="rounded-3xl"],
+html.light-mode #captain div[class*="rounded-2xl"] {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  border: 1px solid rgba(186, 230, 253, 0.7) !important;
+  box-shadow: 0 4px 20px -2px rgba(12, 30, 56, 0.04) !important;
+}
+
+html.light-mode #captain div[class*="rounded-full"] {
+  background-color: #FFFFFF !important;
+}
+
+html.light-mode #captain img {
+  border: 2px solid #FFFFFF !important;
+}
+
+html.light-mode #captain .rounded-full[class*="p-"] {
+  border: 2px solid #38BDF8 !important;
+}
+
+html.light-mode #captain div[class*="rounded-xl"][class*="border"] {
+  background-color: #F0F7FF !important;
+  border: 1px solid rgba(186, 230, 253, 0.7) !important;
+}
+
+html.light-mode #captain div[class*="rounded-xl"][class*="border"] svg {
+  color: #0284C7 !important;
+}
+
+html.light-mode #captain div[class*="rounded-xl"][class*="border"]:hover {
+  background: linear-gradient(135deg, #38BDF8, #0284C7) !important;
+  border-color: #38BDF8 !important;
+}
+
+html.light-mode #captain div[class*="rounded-xl"][class*="border"]:hover svg,
+html.light-mode #captain div[class*="rounded-xl"][class*="border"]:hover span {
+  color: #FFFFFF !important;
+}
+
+/* 10. Footer Section */
+html.light-mode footer {
+  background-color: #F0F7FF !important;
+  background: #F0F7FF !important;
+  border-top: 1px solid #BAE6FD !important;
+}
+
+html.light-mode footer h4,
+html.light-mode footer strong {
+  color: #0C1E38 !important;
+}
+
+html.light-mode footer p,
+html.light-mode footer a,
+html.light-mode footer span {
+  color: #627D98 !important;
+}
+
+html.light-mode footer a:hover {
+  color: #0284C7 !important;
+}
+
+html.light-mode footer .text-\[11px\] {
+  color: #829AB1 !important;
+}
+
+html.light-mode footer button {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  border: 1px solid #BAE6FD !important;
+  color: #0284C7 !important;
+}
+
+/* Form Inputs in Light Mode */
+html.light-mode input,
+html.light-mode textarea,
+html.light-mode select {
+  background-color: #FFFFFF !important;
+  color: #0C1E38 !important;
+  border-color: #BAE6FD !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.04) !important;
+}
+
+html.light-mode input::placeholder,
+html.light-mode textarea::placeholder {
+  color: #627D98 !important;
+}
+
+/* Scrollbars in Light Mode */
+html.light-mode ::-webkit-scrollbar-track {
+  background: #F0F7FF !important;
+}
+
+html.light-mode ::-webkit-scrollbar-thumb {
+  background: #BAE6FD !important;
+}
+
 
 /* 📄 Dedicated Crisp Invoice PDF Print Engine */
 @media print {
